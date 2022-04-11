@@ -1,10 +1,11 @@
 # Author: Brian Carney
 # Purpose: This script uses the BLS and Census API to pull data needed for OCED's monthly economic update webpage.
 
-import requests
 import json
-import pandas as pd
 import os
+
+import requests
+import pandas as pd
 
 # Get data from API
 headers = {"Content-type": "application/json"}

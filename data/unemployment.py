@@ -1,10 +1,11 @@
 # Author: Brian Carney
 # Purpose: This script uses the BLS and Census API to pull data needed for OCED's monthly economic update webpage.
 
-import requests
 import json
-import pandas as pd
 import os
+
+import requests
+import pandas as pd
 
 # Get data from API
 headers = {"Content-type": "application/json"}
@@ -40,5 +41,6 @@ for series in json_data["Results"]["series"]:
 merged_df = pd.concat(dataframes)
 
 print(merged_df)
+
 
 merged_df.to_csv("pandas_results/result_unemployment.csv", index=False)
