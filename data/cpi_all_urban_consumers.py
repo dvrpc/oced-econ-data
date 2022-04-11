@@ -2,11 +2,12 @@
 # Purpose: This script uses the BLS and Census API to pull data needed for OCED's monthly economic update webpage.
 
 import json
-import os
 from pathlib import Path
 
 import pandas as pd
 import requests
+
+from config import BLS_API_KEY
 
 # Get data from API
 headers = {"Content-type": "application/json"}
@@ -15,7 +16,7 @@ data = json.dumps(
         "seriesid": ["CUUR0000SA0", "CUURS12BSA0"],
         "startyear": "2013",
         "endyear": "2022",
-        "registrationkey": os.getenv("BLS_API_KEY"),
+        "registrationkey": BLS_API_KEY,
     }
 )
 p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
