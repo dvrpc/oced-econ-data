@@ -25,10 +25,15 @@ data = json.dumps(
     }
 )
 
+# TODO: error handling around this
 p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
 
 json_data = json.loads(p.text)
 print(json_data["Results"])
+
+# TODO:
+#   * create date field from year and month (using 01 for day)
+#   * remove fields: periodName, latest, footnotes, seriesID
 
 # Parse API data into a list of dataframes
 dataframes = []
