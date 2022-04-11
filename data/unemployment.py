@@ -3,6 +3,7 @@
 
 import json
 import os
+from pathlib import Path
 
 import requests
 import pandas as pd
@@ -40,7 +41,12 @@ for series in json_data["Results"]["series"]:
 # Merge all dataframes together and write to single file
 merged_df = pd.concat(dataframes)
 
-print(merged_df)
+# print(merged_df)
 
+results_dir = "pandas_results"
+try:
+    Path(results_dir).mkdir()
+except FileExistsError:
+    pass
 
-merged_df.to_csv("pandas_results/result_unemployment.csv", index=False)
+merged_df.to_csv(results_dir + "/result_unemployment.csv", index=False)

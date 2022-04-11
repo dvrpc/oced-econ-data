@@ -3,6 +3,7 @@
 
 import json
 import os
+from pathlib import Path
 
 import requests
 import pandas as pd
@@ -35,4 +36,10 @@ merged_df = pd.concat(dataframes)
 
 print(merged_df)
 
-merged_df.to_csv("pandas_results/result_cpi.csv", index=False)
+results_dir = "pandas_results"
+try:
+    Path(results_dir).mkdir()
+except FileExistsError:
+    pass
+
+merged_df.to_csv(results_dir + "/result_cpi.csv", index=False)
