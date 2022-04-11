@@ -3,6 +3,7 @@
 ve/
 ve_dev/
 data/pandas_results/
+config.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
