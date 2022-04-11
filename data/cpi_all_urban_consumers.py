@@ -1,5 +1,4 @@
 # Author: Brian Carney
-# Last updated: 04/07/2022
 # Purpose: This script uses the BLS and Census API to pull data needed for OCED's monthly economic update webpage.
 
 import requests
