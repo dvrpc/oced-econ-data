@@ -14,7 +14,7 @@ data = json.dumps(
         "seriesid": ["CUUR0000SA0", "CUURS12BSA0"],
         "startyear": "2013",
         "endyear": "2022",
-        "registrationkey": os.getenv("key")
+        "registrationkey": os.getenv("BLS_API_KEY"),
     }
 )
 p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
@@ -36,4 +36,3 @@ merged_df = pd.concat(dataframes)
 print(merged_df)
 
 merged_df.to_csv("result.csv", index=False)
-

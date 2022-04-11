@@ -14,7 +14,7 @@ data = json.dumps(
         "seriesid": ["LNS14000000", "LAUMT423798000000003", "LAUMT344594000000003"],
         "startyear": "2013",
         "endyear": "2022",
-        "registrationkey": os.getenv("key")
+        "registrationkey": os.getenv("BLS_API_KEY"),
     }
 )
 p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
@@ -28,13 +28,12 @@ for series in json_data["Results"]["series"]:
     series_name = series["seriesID"]
     df = pd.DataFrame(series["data"])
     df["seriesID"] = series_name
-    df.loc[df['seriesID'] == "LNS14000000", "variable"] = "unemployment_rate"
-    df.loc[df['seriesID'] == "LAUMT423798000000003", "variable"] = "unemployment_rate"
-    df.loc[df['seriesID'] == "LAUMT344594000000003", "variable"] = "unemployment_rate"
-    df.loc[df['seriesID'] == "LNS14000000", "geography"] = "U.S."
-    df.loc[df['seriesID'] == "LAUMT423798000000003", "geography"] = "Philadelphia MSA"
-    df.loc[df['seriesID'] == "LAUMT344594000000003", "geography"] = "Trenton MSA"
-
+    df.loc[df["seriesID"] == "LNS14000000", "variable"] = "unemployment_rate"
+    df.loc[df["seriesID"] == "LAUMT423798000000003", "variable"] = "unemployment_rate"
+    df.loc[df["seriesID"] == "LAUMT344594000000003", "variable"] = "unemployment_rate"
+    df.loc[df["seriesID"] == "LNS14000000", "geography"] = "U.S."
+    df.loc[df["seriesID"] == "LAUMT423798000000003", "geography"] = "Philadelphia MSA"
+    df.loc[df["seriesID"] == "LAUMT344594000000003", "geography"] = "Trenton MSA"
 
     dataframes.append(df)
 
