@@ -9,16 +9,22 @@ import requests
 
 from config import BLS_API_KEY
 
+
+us = "LNS14000000"
+philadelphia = "LAUMT423798000000003"
+trenton = "LAUMT344594000000003"
+
 # Get data from API
 headers = {"Content-type": "application/json"}
 data = json.dumps(
     {
-        "seriesid": ["LNS14000000", "LAUMT423798000000003", "LAUMT344594000000003"],
+        "seriesid": [us, philadelphia, trenton],
         "startyear": "2013",
         "endyear": "2022",
         "registrationkey": BLS_API_KEY,
     }
 )
+
 p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
 
 json_data = json.loads(p.text)
@@ -30,9 +36,9 @@ for series in json_data["Results"]["series"]:
     series_name = series["seriesID"]
     df = pd.DataFrame(series["data"])
     df["seriesID"] = series_name
-    df.loc[df["seriesID"] == "LNS14000000", "geography"] = "U.S."
-    df.loc[df["seriesID"] == "LAUMT423798000000003", "geography"] = "Philadelphia MSA"
-    df.loc[df["seriesID"] == "LAUMT344594000000003", "geography"] = "Trenton MSA"
+    df.loc[df["seriesID"] == us, "geography"] = "United States"
+    df.loc[df["seriesID"] == philadelphia, "geography"] = "Philadelphia MSA"
+    df.loc[df["seriesID"] == trenton, "geography"] = "Trenton MSA"
 
     dataframes.append(df)
 
