@@ -1,0 +1,14 @@
+channels:
+  - conda-forge
+  - jmcmurray
+dependencies:
+  - requests
+  - json
+  - prettytable
+  - pandas
+  - python==3.9
+  - jmcmurray:
+    - os
+  - pip:
+    - bls-data
+    - python-dotenv
