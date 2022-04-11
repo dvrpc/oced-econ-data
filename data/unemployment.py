@@ -30,9 +30,6 @@ for series in json_data["Results"]["series"]:
     series_name = series["seriesID"]
     df = pd.DataFrame(series["data"])
     df["seriesID"] = series_name
-    df.loc[df["seriesID"] == "LNS14000000", "variable"] = "unemployment_rate"
-    df.loc[df["seriesID"] == "LAUMT423798000000003", "variable"] = "unemployment_rate"
-    df.loc[df["seriesID"] == "LAUMT344594000000003", "variable"] = "unemployment_rate"
     df.loc[df["seriesID"] == "LNS14000000", "geography"] = "U.S."
     df.loc[df["seriesID"] == "LAUMT423798000000003", "geography"] = "Philadelphia MSA"
     df.loc[df["seriesID"] == "LAUMT344594000000003", "geography"] = "Trenton MSA"
