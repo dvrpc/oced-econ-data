@@ -5,8 +5,8 @@ import json
 import os
 from pathlib import Path
 
-import requests
 import pandas as pd
+import requests
 
 # Get data from API
 headers = {"Content-type": "application/json"}
