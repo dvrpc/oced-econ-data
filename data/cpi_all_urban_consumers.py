@@ -9,17 +9,23 @@ import requests
 
 from config import BLS_API_KEY
 
+
+us = "CUUR0000SA0"
+philadelphia = "CUURS12BSA0"
+
 # Get data from API
 headers = {"Content-type": "application/json"}
 data = json.dumps(
     {
-        "seriesid": ["CUUR0000SA0", "CUURS12BSA0"],
+        "seriesid": [us, philadelphia],
         "startyear": "2013",
         "endyear": "2022",
         "registrationkey": BLS_API_KEY,
     }
 )
-p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
+p = requests.post(
+    "https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers
+)
 
 json_data = json.loads(p.text)
 

@@ -26,7 +26,9 @@ data = json.dumps(
 )
 
 # TODO: error handling around this
-p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
+p = requests.post(
+    "https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers
+)
 
 json_data = json.loads(p.text)
 print(json_data["Results"])
@@ -41,6 +43,7 @@ for series in json_data["Results"]["series"]:
     series_name = series["seriesID"]
     df = pd.DataFrame(series["data"])
     df["seriesID"] = series_name
+    df.drop(["periodName, latest, footnotes, seriesID"])
     df.loc[df["seriesID"] == us, "geography"] = "United States"
     df.loc[df["seriesID"] == philadelphia, "geography"] = "Philadelphia MSA"
     df.loc[df["seriesID"] == trenton, "geography"] = "Trenton MSA"
