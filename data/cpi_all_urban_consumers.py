@@ -1,6 +1,7 @@
 # Author: Brian Carney
 # Purpose: This script uses the BLS and Census API to pull data needed for OCED's monthly economic update webpage.
 
+from datetime import date
 import json
 from pathlib import Path
 
@@ -35,13 +36,13 @@ for series in json_data["Results"]["series"]:
     series_name = series["seriesID"]
     df = pd.DataFrame(series["data"])
     df["seriesID"] = series_name
-
+    df.drop(["periodName", "latest", "footnotes", "seriesID"], axis=1)
+    # Creating a new column with date format
+    df["date"] = date.fromisoformat(df["year"][0] + "-" + df["period"][0][1:] + "-01")
     dataframes.append(df)
 
 # Merge all dataframes together and write to single file
 merged_df = pd.concat(dataframes)
-
-print(merged_df)
 
 results_dir = "pandas_results"
 try:
