@@ -58,16 +58,38 @@ app.add_middleware(
     response_model=List[UnemploymentRateResponse],
     responses=responses,
 )
-def unemployment_rate(area: Optional[str] = None):
+def unemployment_rate(
+    area: Optional[str] = None, start_year: Optional[int] = None, end_year: Optional[int] = None
+):
     """Get the unemployment rate for the United States, Philadelphia MSA, and Trenton MSA."""
 
+    # build query, starting with base (all items), and then limit by query params
     query = "SELECT * FROM unemployment_rate"
+    q_modifiers = []
 
     if area:
         if area not in areas:
             message = "Please enter a valid area. Must be one of: " + ", ".join(areas)
             return JSONResponse(status_code=400, content={"message": message})
-        query += " WHERE area = '" + area + "'"
+        q_modifiers.append("area = '" + area + "'")
+
+    if start_year and end_year:
+        if end_year < start_year:
+            message = "end_year must be after start_year"
+            return JSONResponse(status_code=400, content={"message": message})
+
+    # we don't need to validate that year is an int b/c of coercion by pydantic into int
+    # (FastAPI will handle this error), but we do need to convert it back to a string
+    if start_year:
+        q_modifiers.append("date_part('year', period) >= '" + str(start_year) + "'")
+
+    if end_year:
+        q_modifiers.append("date_part('year', period) <= '" + str(end_year) + "'")
+
+    if q_modifiers:
+        query += " WHERE " + " AND ".join(q_modifiers)
+
+    query += " ORDER BY period, area ASC"
 
     try:
         with psycopg.connect(PG_CREDS) as conn:
