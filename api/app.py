@@ -1,5 +1,5 @@
 from datetime import date
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +21,9 @@ class Error(BaseModel):
     message: str
 
 
+areas = ["United States", "DVRPC Region", "Philadelphia MSA", "Trenton MSA"]
+
+
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -37,6 +40,7 @@ def custom_openapi():
 app = FastAPI(openapi_url="/api/econ-data/v1/openapi.json", docs_url="/api/econ-data/v1/docs")
 app.openapi = custom_openapi
 responses = {
+    400: {"model": Error, "description": "Bad Request"},
     404: {"model": Error, "description": "Not Found"},
     500: {"model": Error, "description": "Internal Server Error"},
 }
@@ -54,11 +58,20 @@ app.add_middleware(
     response_model=List[UnemploymentRateResponse],
     responses=responses,
 )
-def unemployment_rate():
+def unemployment_rate(area: Optional[str] = None):
     """Get the unemployment rate for the United States, Philadelphia MSA, and Trenton MSA."""
+
+    query = "SELECT * FROM unemployment_rate"
+
+    if area:
+        if area not in areas:
+            message = "Please enter a valid area. Must be one of: " + ", ".join(areas)
+            return JSONResponse(status_code=400, content={"message": message})
+        query += " WHERE area = '" + area + "'"
+
     try:
         with psycopg.connect(PG_CREDS) as conn:
-            result = conn.execute("SELECT * FROM unemployment_rate").fetchall()
+            result = conn.execute(query).fetchall()
     except psycopg.OperationalError:
         return JSONResponse(
             status_code=500,
