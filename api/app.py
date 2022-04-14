@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from config import PG_CREDS
 
 
-class UnemploymentRateResponse(BaseModel):
+class RateResponse(BaseModel):
     period: date
     rate: float
     area: str
@@ -106,7 +106,7 @@ def get_data(table, area=None, start_year=None, end_year=None):
 
 @app.get(
     "/api/econ-data/v1/unemployment",
-    response_model=List[UnemploymentRateResponse],
+    response_model=List[RateResponse],
     responses=responses,
 )
 def unemployment_rate(
@@ -116,6 +116,30 @@ def unemployment_rate(
 
     try:
         data = get_data("unemployment_rate", area, start_year, end_year)
+    except EconDataError as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": e.message},
+        )
+
+    return data
+
+
+@app.get(
+    "/api/econ-data/v1/inflation",
+    response_model=List[RateResponse],
+    responses=responses,
+)
+def inflation_rate(
+    area: Optional[str] = None, start_year: Optional[int] = None, end_year: Optional[int] = None
+):
+    """
+    Get the inflation rate (CPI, all urban consumers) for the United States and Philadelphia
+    MSA. (Trenton MSA is not included in the BLS survey from which this data comes.)
+    """
+
+    try:
+        data = get_data("inflation_rate", area, start_year, end_year)
     except EconDataError as e:
         return JSONResponse(
             status_code=e.status_code,
