@@ -21,7 +21,10 @@ class Error(BaseModel):
     message: str
 
 
-areas = ["United States", "DVRPC Region", "Philadelphia MSA", "Trenton MSA"]
+class EconDataError(BaseException):
+    def __init__(self, status_code, message):
+        self.status_code = status_code
+        self.message = message
 
 
 def custom_openapi():
@@ -53,30 +56,25 @@ app.add_middleware(
 )
 
 
-@app.get(
-    "/api/econ-data/v1/unemployment",
-    response_model=List[UnemploymentRateResponse],
-    responses=responses,
-)
-def unemployment_rate(
-    area: Optional[str] = None, start_year: Optional[int] = None, end_year: Optional[int] = None
-):
-    """Get the unemployment rate for the United States, Philadelphia MSA, and Trenton MSA."""
+areas = ["United States", "DVRPC Region", "Philadelphia MSA", "Trenton MSA"]
 
+
+def get_data(table, area=None, start_year=None, end_year=None):
+    """Get data from *table*, with optional query parameters."""
     # build query, starting with base (all items), and then limit by query params
-    query = "SELECT * FROM unemployment_rate"
+    query = "SELECT * FROM " + table
     q_modifiers = []
 
     if area:
         if area not in areas:
             message = "Please enter a valid area. Must be one of: " + ", ".join(areas)
-            return JSONResponse(status_code=400, content={"message": message})
+            raise EconDataError(400, message)
         q_modifiers.append("area = '" + area + "'")
 
     if start_year and end_year:
         if end_year < start_year:
             message = "end_year must be after start_year"
-            return JSONResponse(status_code=400, content={"message": message})
+            raise EconDataError(400, message)
 
     # we don't need to validate that year is an int b/c of coercion by pydantic into int
     # (FastAPI will handle this error), but we do need to convert it back to a string
@@ -95,18 +93,33 @@ def unemployment_rate(
         with psycopg.connect(PG_CREDS) as conn:
             result = conn.execute(query).fetchall()
     except psycopg.OperationalError:
-        return JSONResponse(
-            status_code=500,
-            content={"message": "Database error."},
-        )
+        raise EconDataError(500, "Database error")
 
     if not result:
+        raise EconDataError(404, "No data available for given criteria.")
+
+    data = []
+    for row in result:
+        data.append({"period": row[0], "rate": row[1], "area": row[2]})
+    return data
+
+
+@app.get(
+    "/api/econ-data/v1/unemployment",
+    response_model=List[UnemploymentRateResponse],
+    responses=responses,
+)
+def unemployment_rate(
+    area: Optional[str] = None, start_year: Optional[int] = None, end_year: Optional[int] = None
+):
+    """Get the unemployment rate for the United States, Philadelphia MSA, and Trenton MSA."""
+
+    try:
+        data = get_data("unemployment_rate", area, start_year, end_year)
+    except EconDataError as e:
         return JSONResponse(
-            status_code=404,
-            content={"message": "No data available."},
+            status_code=e.status_code,
+            content={"message": e.message},
         )
 
-    ur = []
-    for row in result:
-        ur.append({"period": row[0], "rate": row[1], "area": row[2]})
-    return ur
+    return data
