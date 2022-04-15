@@ -37,21 +37,18 @@ EXCEPTION
 END $$;
 
 CREATE TABLE IF NOT EXISTS inflation_rate (
-    id SERIAL,
     period DATE NOT NULL,
     rate REAL NOT NULL,
     area geographic_area NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS unemployment_rate (
-    id SERIAL,
     period DATE NOT NULL,
     rate REAL NOT NULL,
     area geographic_area NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS housing (
-    id SERIAL,
     period DATE NOT NULL,
     units SMALLINT,
     rate REAL NOT NULL,
@@ -59,7 +56,6 @@ CREATE TABLE IF NOT EXISTS housing (
 );
 
 CREATE TABLE IF NOT EXISTS employment_by_industry (
-    id SERIAL,
     period DATE NOT NULL,
     number REAL NOT NULL,
     share REAL NOT NULL,
