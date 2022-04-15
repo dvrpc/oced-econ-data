@@ -36,13 +36,25 @@ for series in json_data["Results"]["series"]:
     series_name = series["seriesID"]
     df = pd.DataFrame(series["data"])
     df["seriesID"] = series_name
-    df.drop(["periodName", "latest", "footnotes", "seriesID"], axis=1)
+    df.loc[df["seriesID"] == us, "geography"] = "United States"
+    df.loc[df["seriesID"] == philadelphia, "geography"] = "Philadelphia MSA"
     # Creating a new column with date format
-    df["date"] = date.fromisoformat(df["year"][0] + "-" + df["period"][0][1:] + "-01")
+    df["date"] = df.apply(
+        lambda row: date.fromisoformat(
+            str(row.year) + "-" + (str(row.period[1:]) + "-01")
+        ),
+        axis=1,
+    )
+    df.drop(
+        ["year", "period", "periodName", "latest", "footnotes"], axis=1, inplace=True
+    )
+
     dataframes.append(df)
 
 # Merge all dataframes together and write to single file
 merged_df = pd.concat(dataframes)
+merged_df = merged_df[["date", "value", "geography"]]
+print(merged_df)
 
 results_dir = "pandas_results"
 try:

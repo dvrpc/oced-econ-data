@@ -32,10 +32,7 @@ p = requests.post(
 )
 
 json_data = json.loads(p.text)
-print(json_data["Results"])
 
-# TODO:
-#   * remove fields: periodName, latest, footnotes, seriesID
 
 # Parse API data into a list of dataframes
 dataframes = []
@@ -47,12 +44,21 @@ for series in json_data["Results"]["series"]:
     df.loc[df["seriesID"] == philadelphia, "geography"] = "Philadelphia MSA"
     df.loc[df["seriesID"] == trenton, "geography"] = "Trenton MSA"
     # Creating a new column with date format
-    df["date"] = date.fromisoformat(df["year"][0] + "-" + df["period"][0][1:] + "-01")
+    df["date"] = df.apply(
+        lambda row: date.fromisoformat(
+            str(row.year) + "-" + (str(row.period[1:]) + "-01")
+        ),
+        axis=1,
+    )
+    df.drop(
+        ["year", "period", "periodName", "latest", "footnotes"], axis=1, inplace=True
+    )
 
     dataframes.append(df)
 
 # Merge all dataframes together and write to single file
 merged_df = pd.concat(dataframes)
+merged_df = merged_df[["date", "value", "geography"]]
 
 # print(merged_df)
 
