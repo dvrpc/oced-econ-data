@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -107,6 +107,65 @@ def get_data(
     return data
 
 
+def get_recent_matching_data(table: str, years: int = None) -> List[RateResponse]:
+    """
+    Get data only when it exists for all series per period.
+
+    For instance, for inflation, there is data every month for the U.S., but only every
+    two months for Philadelphia. get_data() would return two months of U.S. data per month
+    of Philadelphipa data, whereas this function only returns the months were data is
+    available for both the U.S. and Philadelphia.
+
+    A similar situation occurs because local data lags national data, so get_data() will often
+    return an additional leading month of national data compared to local data.
+
+    If *years* isn't provided, default to returning 1 year of data.
+    """
+
+    if not years:
+        years = 1
+
+    # set vars per table
+    # count: number of series in table (for subquery that gets only data that has *count*
+    #   items per period (i.e., if less than this, data not available for all series))
+    # periods:
+    #   inflation = bimonthly for 2 series, so 12 = 1 year of data
+    #   unemployment = monthly for 3 series, so 36 = 1 year of data
+    if table == "inflation_rate":
+        count = 2
+        periods = years * 12
+
+    if table == "unemployment_rate":
+        count = 3
+        periods = years * 36
+
+    query = f"""
+        SELECT * FROM {table}
+        WHERE period IN
+            (SELECT period FROM {table}
+                GROUP BY period
+                HAVING COUNT(area) = {count}
+            )
+        ORDER BY period DESC, area ASC
+        LIMIT {periods}
+    """
+
+    try:
+        with psycopg.connect(PG_CREDS) as conn:
+            result = conn.execute(query).fetchall()
+    except psycopg.OperationalError:
+        raise EconDataError(500, "Database error")
+
+    if not result:
+        raise EconDataError(404, "No data available for given criteria.")
+
+    data = []
+    for row in result:
+        item = {"period": row[0], "rate": row[1], "area": row[2]}
+        data.append(RateResponse(**item))
+    return data
+
+
 @app.get(
     "/api/econ-data/v1/unemployment",
     response_model=List[RateResponse],
@@ -140,6 +199,46 @@ def inflation_rate(
     """
     try:
         data = get_data("inflation_rate", area, start_year, end_year)
+    except EconDataError as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": e.message},
+        )
+    return data
+
+
+@app.get(
+    "/api/econ-data/v1/inflation-recent",
+    response_model=List[RateResponse],
+    responses=responses,
+)
+def recent_inflation_rates(years: Optional[int] = None):
+    """
+    Get the most recent inflation rate (CPI, all urban consumers) for the United States and
+    Philadelphia MSA where data is available for both areas. (Trenton MSA is not included in the
+    BLS survey from which this data comes.)
+    """
+    try:
+        data = get_recent_matching_data("inflation_rate", years)
+    except EconDataError as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": e.message},
+        )
+    return data
+
+
+@app.get(
+    "/api/econ-data/v1/unemployment-recent",
+    response_model=List[RateResponse],
+    responses=responses,
+)
+def recent_unemployment_rates(years: Optional[int] = None):
+    """
+    Get the most recent unemployment rate for the United States, Philadelphia MSA, and Trenton MSA where data is available for all areas.
+    """
+    try:
+        data = get_recent_matching_data("unemployment_rate", years)
     except EconDataError as e:
         return JSONResponse(
             status_code=e.status_code,
