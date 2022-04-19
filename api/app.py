@@ -208,6 +208,25 @@ def inflation_rate(
 
 
 @app.get(
+    "/api/econ-data/v1/unemployment-recent",
+    response_model=List[RateResponse],
+    responses=responses,
+)
+def recent_unemployment_rates(years: Optional[int] = None):
+    """
+    Get the most recent unemployment rate for the United States, Philadelphia MSA, and Trenton MSA where data is available for all areas.
+    """
+    try:
+        data = get_recent_matching_data("unemployment_rate", years)
+    except EconDataError as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": e.message},
+        )
+    return data
+
+
+@app.get(
     "/api/econ-data/v1/inflation-recent",
     response_model=List[RateResponse],
     responses=responses,
@@ -220,25 +239,6 @@ def recent_inflation_rates(years: Optional[int] = None):
     """
     try:
         data = get_recent_matching_data("inflation_rate", years)
-    except EconDataError as e:
-        return JSONResponse(
-            status_code=e.status_code,
-            content={"message": e.message},
-        )
-    return data
-
-
-@app.get(
-    "/api/econ-data/v1/unemployment-recent",
-    response_model=List[RateResponse],
-    responses=responses,
-)
-def recent_unemployment_rates(years: Optional[int] = None):
-    """
-    Get the most recent unemployment rate for the United States, Philadelphia MSA, and Trenton MSA where data is available for all areas.
-    """
-    try:
-        data = get_recent_matching_data("unemployment_rate", years)
     except EconDataError as e:
         return JSONResponse(
             status_code=e.status_code,
