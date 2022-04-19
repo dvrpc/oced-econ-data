@@ -1,5 +1,5 @@
 from datetime import date
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,7 +59,9 @@ app.add_middleware(
 areas = ["United States", "DVRPC Region", "Philadelphia MSA", "Trenton MSA"]
 
 
-def get_data(table, area=None, start_year=None, end_year=None):
+def get_data(
+    table: str, area: str = None, start_year: int = None, end_year: int = None
+) -> List[RateResponse]:
     """Get data from *table*, with optional query parameters."""
     # build query, starting with base (all items), and then limit by query params
     query = "SELECT * FROM " + table
@@ -100,7 +102,8 @@ def get_data(table, area=None, start_year=None, end_year=None):
 
     data = []
     for row in result:
-        data.append({"period": row[0], "rate": row[1], "area": row[2]})
+        item = {"period": row[0], "rate": row[1], "area": row[2]}
+        data.append(RateResponse(**item))
     return data
 
 
@@ -113,7 +116,6 @@ def unemployment_rate(
     area: Optional[str] = None, start_year: Optional[int] = None, end_year: Optional[int] = None
 ):
     """Get the unemployment rate for the United States, Philadelphia MSA, and Trenton MSA."""
-
     try:
         data = get_data("unemployment_rate", area, start_year, end_year)
     except EconDataError as e:
@@ -121,7 +123,6 @@ def unemployment_rate(
             status_code=e.status_code,
             content={"message": e.message},
         )
-
     return data
 
 
@@ -137,7 +138,6 @@ def inflation_rate(
     Get the inflation rate (CPI, all urban consumers) for the United States and Philadelphia
     MSA. (Trenton MSA is not included in the BLS survey from which this data comes.)
     """
-
     try:
         data = get_data("inflation_rate", area, start_year, end_year)
     except EconDataError as e:
@@ -145,5 +145,4 @@ def inflation_rate(
             status_code=e.status_code,
             content={"message": e.message},
         )
-
     return data
