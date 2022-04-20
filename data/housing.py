@@ -4,5 +4,6 @@
 import requests
 import pandas as pd
 
-response = requests.get("https://www2.census.gov/econ/bps/Metro/ma0001c.txt")
-data = response.text
+
+data1 = pd.read_csv("https://www2.census.gov/econ/bps/Metro/ma0001c.txt")
+print(data1)
