@@ -54,7 +54,6 @@ for series in json_data["Results"]["series"]:
 # Merge all dataframes together and write to single file
 merged_df = pd.concat(dataframes)
 merged_df = merged_df[["date", "value", "geography"]]
-print(merged_df)
 
 results_dir = "pandas_results"
 try:
