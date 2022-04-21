@@ -12,13 +12,10 @@ if r.status_code != 200:
 
 soup = BeautifulSoup(r.text, features="html.parser")
 
-# there are two tables on the page, get the one we want by id
-table = soup.find("table", id="ro3fx9527")
+# two tables on page; get the one we want by id, and then its body (ignore headers and notes)
+table_body = soup.find("table", id="ro3fx9527").find("tbody")
 
-# get the table body (ignore header rows at top and notes at bottom)
-table_body = table.find("tbody")
-
-# print each row of the table
+# print each row of the table body
 for i, row in enumerate(table_body.find_all("tr")):
     # data grouped into rows of three; determine where we are within each set of 3
     if i % 3 == 0:  # first row (industry name)
@@ -28,7 +25,7 @@ for i, row in enumerate(table_body.find_all("tr")):
         year = row.th.string
         print(i, f"first year data ({year}) for {industry}")
 
-    if i % 3 == 2:  # hird row (second year of data)
+    if i % 3 == 2:  # third row (second year of data)
         year = row.th.string
         print(i, f"second year data ({year}) for {industry}")
 
