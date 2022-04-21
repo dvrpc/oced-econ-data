@@ -31,3 +31,11 @@ for i, row in enumerate(table_body.find_all("tr")):
     if i % 3 == 2:  # hird row (second year of data)
         year = row.th.string
         print(i, f"second year data ({year}) for {industry}")
+
+    cells = row.find_all("td")
+    for cell in cells[0:12]:  # last cell is annual average, don't include it
+        # some cells are empty (single space), so use .text (unicode) rather than .string,
+        # which gives us ability to use strip() (and also includes full text for
+        # data that is noted to be preliminary)
+        if cell.text.strip():
+            print(cell.text)
