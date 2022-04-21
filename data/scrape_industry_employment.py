@@ -12,4 +12,12 @@ if r.status_code != 200:
 
 soup = BeautifulSoup(r.text, features="html.parser")
 
-print(soup.prettify())
+# there are two tables on the page, get the one we want by id
+table = soup.find("table", id="ro3fx9527")
+
+# get the table body (ignore header rows at top and notes at bottom)
+table_body = table.find("tbody")
+
+# print each row of the table
+for i, row in enumerate(table_body.find_all("tr")):
+    print(row)
