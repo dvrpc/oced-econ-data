@@ -20,4 +20,12 @@ table_body = table.find("tbody")
 
 # print each row of the table
 for i, row in enumerate(table_body.find_all("tr")):
-    print(row)
+    # data grouped into rows of three; determine where we are within each set of 3
+    if i % 3 == 0:  # first row
+        print(i, "series: ", row.th.string)
+
+    if i % 3 == 1:  # second row (first year of data)
+        print(i, "data (first year)", row.th.string)
+
+    if i % 3 == 2:  # hird row (second year of data)
+        print(i, "data (second year)", row.th.string)
