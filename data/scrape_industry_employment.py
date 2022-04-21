@@ -21,11 +21,13 @@ table_body = table.find("tbody")
 # print each row of the table
 for i, row in enumerate(table_body.find_all("tr")):
     # data grouped into rows of three; determine where we are within each set of 3
-    if i % 3 == 0:  # first row
-        print(i, "series: ", row.th.string)
+    if i % 3 == 0:  # first row (industry name)
+        industry = row.th.string
 
     if i % 3 == 1:  # second row (first year of data)
-        print(i, "data (first year)", row.th.string)
+        year = row.th.string
+        print(i, f"first year data ({year}) for {industry}")
 
     if i % 3 == 2:  # hird row (second year of data)
-        print(i, "data (second year)", row.th.string)
+        year = row.th.string
+        print(i, f"second year data ({year}) for {industry}")
