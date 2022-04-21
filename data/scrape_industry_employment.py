@@ -15,6 +15,12 @@ soup = BeautifulSoup(r.text, features="html.parser")
 # two tables on page; get the one we want by id, and then its body (ignore headers and notes)
 table_body = soup.find("table", id="ro3fx9527").find("tbody")
 
+# a simple and incomplete check that the structure hasn't changed
+expected_row_count = 33
+actual_row_count = len(table_body.find_all("tr"))
+if actual_row_count != expected_row_count:
+    sys.exit(f"Expected row count of {expected_row_count}, but got {actual_row_count}. Exiting.")
+
 # print each row of the table body
 for i, row in enumerate(table_body.find_all("tr")):
     # data grouped into rows of three; determine where we are within each set of 3
