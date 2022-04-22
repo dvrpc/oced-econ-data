@@ -1,3 +1,4 @@
+import csv
 from datetime import date
 import sys
 
@@ -50,3 +51,7 @@ for i, row in enumerate(table_body.find_all("tr")):
             data_date = date.fromisoformat(year + "-" + str(j + 1).zfill(2) + "-01")
             # add it
             data.append([data_date, value, industry])
+
+with open("pandas_results/industry_employment.csv", "w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerows(data)
