@@ -30,6 +30,7 @@ for i, row in enumerate(table_body.find_all("tr")):
     # data grouped into rows of three; determine where we are within each set of 3
     if i % 3 == 0:  # first row (industry name)
         industry = row.th.string
+        industry = industry.replace("&", "and")
 
     if i % 3 == 1:  # second row (first year of data)
         year = row.th.string
@@ -50,7 +51,7 @@ for i, row in enumerate(table_body.find_all("tr")):
             # create date
             data_date = date.fromisoformat(year + "-" + str(j + 1).zfill(2) + "-01")
             # add it
-            data.append([data_date, value, industry])
+            data.append([data_date, value, industry, "Philadelphia MSA"])
 
 with open("pandas_results/industry_employment.csv", "w", newline="") as f:
     writer = csv.writer(f)
