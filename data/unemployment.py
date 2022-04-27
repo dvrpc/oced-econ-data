@@ -1,6 +1,7 @@
 # Author: Brian Carney
 # Purpose: This script uses the BLS and Census API to pull data needed for OCED's monthly economic update webpage.
 
+from datetime import date
 import json
 from pathlib import Path
 
@@ -26,14 +27,12 @@ data = json.dumps(
 )
 
 # TODO: error handling around this
-p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
+p = requests.post(
+    "https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers
+)
 
 json_data = json.loads(p.text)
-print(json_data["Results"])
 
-# TODO:
-#   * create date field from year and month (using 01 for day)
-#   * remove fields: periodName, latest, footnotes, seriesID
 
 # Parse API data into a list of dataframes
 dataframes = []
@@ -44,11 +43,22 @@ for series in json_data["Results"]["series"]:
     df.loc[df["seriesID"] == us, "geography"] = "United States"
     df.loc[df["seriesID"] == philadelphia, "geography"] = "Philadelphia MSA"
     df.loc[df["seriesID"] == trenton, "geography"] = "Trenton MSA"
+    # Creating a new column with date format
+    df["date"] = df.apply(
+        lambda row: date.fromisoformat(
+            str(row.year) + "-" + (str(row.period[1:]) + "-01")
+        ),
+        axis=1,
+    )
+    df.drop(
+        ["year", "period", "periodName", "latest", "footnotes"], axis=1, inplace=True
+    )
 
     dataframes.append(df)
 
 # Merge all dataframes together and write to single file
 merged_df = pd.concat(dataframes)
+merged_df = merged_df[["date", "value", "geography"]]
 
 # print(merged_df)
 
