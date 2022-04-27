@@ -27,9 +27,7 @@ data = json.dumps(
 )
 
 # TODO: error handling around this
-p = requests.post(
-    "https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers
-)
+p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
 
 json_data = json.loads(p.text)
 
@@ -45,14 +43,10 @@ for series in json_data["Results"]["series"]:
     df.loc[df["seriesID"] == trenton, "geography"] = "Trenton MSA"
     # Creating a new column with date format
     df["date"] = df.apply(
-        lambda row: date.fromisoformat(
-            str(row.year) + "-" + (str(row.period[1:]) + "-01")
-        ),
+        lambda row: date.fromisoformat(str(row.year) + "-" + (str(row.period[1:]) + "-01")),
         axis=1,
     )
-    df.drop(
-        ["year", "period", "periodName", "latest", "footnotes"], axis=1, inplace=True
-    )
+    df.drop(["year", "period", "periodName", "latest", "footnotes"], axis=1, inplace=True)
 
     dataframes.append(df)
 
@@ -60,12 +54,10 @@ for series in json_data["Results"]["series"]:
 merged_df = pd.concat(dataframes)
 merged_df = merged_df[["date", "value", "geography"]]
 
-# print(merged_df)
-
-results_dir = "pandas_results"
+results_dir = "results"
 try:
     Path(results_dir).mkdir()
 except FileExistsError:
     pass
 
-merged_df.to_csv(results_dir + "/result_unemployment.csv", index=False)
+merged_df.to_csv(results_dir + "/unemployment.csv", index=False)

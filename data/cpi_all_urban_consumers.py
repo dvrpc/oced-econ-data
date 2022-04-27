@@ -55,10 +55,10 @@ for series in json_data["Results"]["series"]:
 merged_df = pd.concat(dataframes)
 merged_df = merged_df[["date", "value", "geography"]]
 
-results_dir = "pandas_results"
+results_dir = "results"
 try:
     Path(results_dir).mkdir()
 except FileExistsError:
     pass
 
-merged_df.to_csv(results_dir + "/result_cpi.csv", index=False)
+merged_df.to_csv(results_dir + "/cpi.csv", index=False)
