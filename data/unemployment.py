@@ -1,7 +1,7 @@
 """
 Fetch unemployment data (CPS) from BLS's API.
 
-If --csv is passed to the program (python3 uemployment.py --csv), it will create a CSV of
+If --csv is passed to the program (python3 unemployment.py --csv), it will create a CSV of
 the fetched data. Otherwise, it will insert it into the database specified in the PG_CREDS
 variable in config.py.
 """
