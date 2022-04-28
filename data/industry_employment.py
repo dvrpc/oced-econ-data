@@ -1,12 +1,34 @@
+"""
+Fetch employment by industry data (CES) from BLS's API.
+
+If --csv is passed to the program (python3 industry_employment.py --csv), it will create a CSV of
+the fetched data. Otherwise, it will insert it into the database specified in the PG_CREDS
+variable in config.py.
+"""
+
+import argparse
 import csv
 from datetime import date
 import json
 from pathlib import Path
+import sys
 from typing import List
 
+import psycopg
 import requests
 
 from config import BLS_API_KEY
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--csv", action="store_true")
+args = parser.parse_args()
+
+# we don't need a database connection if just trying to create a CSV
+if args.csv:
+    PG_CREDS = ""
+else:
+    from config import PG_CREDS
 
 
 trenton = "SMU3445940"
@@ -42,31 +64,60 @@ data = json.dumps(
     }
 )
 
-# TODO: error handling around this
 p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
+if p.status_code != 200:
+    sys.exit(f"Unable to fetch data from BLS API.")
 
 json_data = json.loads(p.text)
 
-# go through results, make human-readable area and industry, create date
-cleaned_data: List = []
-for series in json_data["Results"]["series"]:
-    if series["seriesID"][:10] == trenton:
-        area = "Trenton MSA"
-    if series["seriesID"][:10] == philadelphia:
-        area = "Philadelphia MSA"
-    industry = industries[series["seriesID"][10:]]
+if args.csv:
+    cleaned_data = []
 
-    for record in series["data"]:
-        period = date.fromisoformat(record["year"] + "-" + (str(record["period"][1:]) + "-01"))
-        cleaned_data.append([period, record["value"], industry, area])
-
-results_dir = "results"
+# go through results and either add to db or (for --csv), put into list for later
 try:
-    Path(results_dir).mkdir()
-except FileExistsError:
-    pass
+    with psycopg.connect(PG_CREDS) as conn:
+        for series in json_data["Results"]["series"]:
+            if series["seriesID"][:10] == trenton:
+                area = "Trenton MSA"
+            if series["seriesID"][:10] == philadelphia:
+                area = "Philadelphia MSA"
+            industry = industries[series["seriesID"][10:]]
 
-with open("results/industry_employment", "w", newline="") as f:
-    writer = csv.writer(f)
-    writer.writerow(["period", "value", "industry", "area"])
-    writer.writerows(cleaned_data)
+            for record in series["data"]:
+                period = date.fromisoformat(
+                    record["year"] + "-" + (str(record["period"][1:]) + "-01")
+                )
+
+                if args.csv:
+                    cleaned_data.append([period, record["value"], industry, area])
+                else:
+                    conn.execute(
+                        """
+                        INSERT INTO employment_by_industry
+                        (period, number, industry, area)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT DO NOTHING
+                    """,
+                        (
+                            period,
+                            record["value"],
+                            industry,
+                            area,
+                        ),
+                    )
+except psycopg.OperationalError:
+    sys.exit("Database error.")
+
+if args.csv:
+    results_dir = "results"
+    try:
+        Path(results_dir).mkdir()
+    except FileExistsError:
+        pass
+
+    with open("results/industry_employment.csv", "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["period", "value", "industry", "area"])
+        writer.writerows(cleaned_data)
+
+    print("CSV created in results/ directory.")
