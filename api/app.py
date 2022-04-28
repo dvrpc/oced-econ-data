@@ -1,5 +1,4 @@
 import calendar
-from collections import defaultdict
 from datetime import date
 from itertools import groupby
 from operator import itemgetter
