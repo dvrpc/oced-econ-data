@@ -53,7 +53,7 @@ for i, row in enumerate(table_body.find_all("tr")):
             # add it
             data.append([data_date, value, industry, "Philadelphia MSA"])
 
-with open("results/industry_employment.csv", "w", newline="") as f:
+with open("results/industry_employment_from_scraping.csv", "w", newline="") as f:
     writer = csv.writer(f)
     writer.writerow(["period", "value", "industry", "area"])
     writer.writerows(data)
