@@ -1,12 +1,14 @@
 import calendar
+from collections import defaultdict
 from datetime import date
+from itertools import groupby
+from operator import itemgetter
 from typing import Dict, List, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
-import pandas as pd
 import psycopg
 from pydantic import BaseModel
 
@@ -256,8 +258,8 @@ def recent_inflation_rates(years: Optional[int] = None):
 )
 def employment_by_industry():
     """
-    Get the most recent employment, and year-over-year percentage change, by industry for the
-    Philaladelphia MSA.
+    Get the most recent employment, and year-over-year absolute and percentage change, by industry
+    for the Philaladelphia and Trenton MSAs.
     """
     query = "SELECT * FROM employment_by_industry ORDER BY period DESC, industry ASC"
 
@@ -274,126 +276,39 @@ def employment_by_industry():
     for row in result:
         data.append({"period": row[0], "number": row[1], "industry": row[2], "area": row[3]})
 
-    # get most recent period and one year before that
-    most_recent_period = data[0]["period"]
-    one_year_ago = date(
-        most_recent_period.year - 1, most_recent_period.month, most_recent_period.day
-    )
+    # get most recent period and one year before that, get data for just those periods
+    most_recent = data[0]["period"]
+    year_ago = date(most_recent.year - 1, most_recent.month, most_recent.day)
+    most_recent_data = [record for record in data if record["period"] == most_recent]
+    year_ago_data = [record for record in data if record["period"] == year_ago]
 
-    # create pandas dataframe to make it easier to do calculations
-    df = pd.DataFrame(data)
+    # use groupby with itemgetter to reshape the data
+    # <https://www.geeksforgeeks.org/group-list-of-dictionary-data-by-particular-key-in-python/>
 
-    # create a dataframe for the data for each of these periods
-    most_recent_df = df[df["period"] == most_recent_period]
-    year_ago_df = df[df["period"] == one_year_ago]
+    most_recent_data_by_industry = {}
+    for key, value in groupby(most_recent_data, key=itemgetter("industry")):
+        values = list(value)
+        area = {}
+        area[values[0]["area"]] = {"number": values[0]["number"]}
+        area[values[1]["area"]] = {"number": values[1]["number"]}
+        most_recent_data_by_industry[key] = area
 
-    # combine them so we have each period/data in same row, matched on industry/area,
-    # and then set industry as index and add columns for absolute and percentage change
-    combined = most_recent_df.merge(year_ago_df, on=["industry", "area"], how="left")
-    combined.set_index("industry", inplace=True)
-    combined["percent change"] = (combined["number_x"] - combined["number_y"]) / combined[
-        "number_y"
-    ]
-    combined["abs_change"] = combined["number_x"] - combined["number_y"]
+    year_ago_data_by_industry = {}
+    for key, value in groupby(year_ago_data, key=itemgetter("industry")):
+        values = list(value)
+        area = {}
+        area[values[0]["area"]] = {"number": values[0]["number"]}
+        area[values[1]["area"]] = {"number": values[1]["number"]}
+        year_ago_data_by_industry[key] = area
 
-    human_most_recent = (
-        calendar.month_abbr[most_recent_period.month] + " " + str(most_recent_period.year)
-    )
+    most_recent_friendly_date = calendar.month_abbr[most_recent.month] + " " + str(most_recent.year)
+    year_ago_friendly_date = calendar.month_abbr[year_ago.month] + " " + str(year_ago.year)
+
     summary_data = {
-        human_most_recent: {
-            "Mining, Logging, and Construction": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Mining, Logging, and Construction"]["number_x"],
-                    "absolute_change": combined.loc["Mining, Logging, and Construction"][
-                        "abs_change"
-                    ],
-                    "percent_change": combined.loc["Mining, Logging, and Construction"][
-                        "percent change"
-                    ],
-                }
-            },
-            "Manufacturing": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Manufacturing"]["number_x"],
-                    "absolute_change": combined.loc["Manufacturing"]["abs_change"],
-                    "percent_change": combined.loc["Manufacturing"]["percent change"],
-                }
-            },
-            "Trade, Transportation, and Utilities": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Trade, Transportation, and Utilities"]["number_x"],
-                    "absolute_change": combined.loc["Trade, Transportation, and Utilities"][
-                        "abs_change"
-                    ],
-                    "percent_change": combined.loc["Trade, Transportation, and Utilities"][
-                        "percent change"
-                    ],
-                }
-            },
-            "Information": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Information"]["number_x"],
-                    "absolute_change": combined.loc["Information"]["abs_change"],
-                    "percent_change": combined.loc["Information"]["percent change"],
-                }
-            },
-            "Financial Activities": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Financial Activities"]["number_x"],
-                    "absolute_change": combined.loc["Financial Activities"]["abs_change"],
-                    "percent_change": combined.loc["Financial Activities"]["percent change"],
-                }
-            },
-            "Professional and Business Services": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Professional and Business Services"]["number_x"],
-                    "absolute_change": combined.loc["Professional and Business Services"][
-                        "abs_change"
-                    ],
-                    "percent_change": combined.loc["Professional and Business Services"][
-                        "percent change"
-                    ],
-                }
-            },
-            "Educational and Health Services": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Educational and Health Services"]["number_x"],
-                    "absolute_change": combined.loc["Educational and Health Services"][
-                        "abs_change"
-                    ],
-                    "percent_change": combined.loc["Educational and Health Services"][
-                        "percent change"
-                    ],
-                }
-            },
-            "Leisure and Hospitality": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Leisure and Hospitality"]["number_x"],
-                    "absolute_change": combined.loc["Leisure and Hospitality"]["abs_change"],
-                    "percent_change": combined.loc["Leisure and Hospitality"]["percent change"],
-                }
-            },
-            "Other Services": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Other Services"]["number_x"],
-                    "absolute_change": combined.loc["Other Services"]["abs_change"],
-                    "percent_change": combined.loc["Other Services"]["percent change"],
-                }
-            },
-            "Government": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Government"]["number_x"],
-                    "absolute_change": combined.loc["Government"]["abs_change"],
-                    "percent_change": combined.loc["Government"]["percent change"],
-                }
-            },
-            "Total Nonfarm": {
-                "Philadelphia MSA": {
-                    "number": combined.loc["Total Nonfarm"]["number_x"],
-                    "absolute_change": combined.loc["Total Nonfarm"]["abs_change"],
-                    "percent_change": combined.loc["Total Nonfarm"]["percent change"],
-                }
-            },
-        }
+        most_recent_friendly_date: most_recent_data_by_industry,
+        year_ago_friendly_date: year_ago_data_by_industry,
     }
+
+    # TODO: include absolute change and percent change
+
     return summary_data
