@@ -66,7 +66,7 @@ try:
 except FileExistsError:
     pass
 
-with open("results/industry_employment_from_api.csv", "w", newline="") as f:
+with open("results/industry_employment", "w", newline="") as f:
     writer = csv.writer(f)
     writer.writerow(["period", "value", "industry", "area"])
     writer.writerows(cleaned_data)
