@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS employment_by_industry (
     period DATE NOT NULL,
     number REAL NOT NULL,
     industry industry_group NOT NULL,
-    area geographic_area NOT NULL
+    area geographic_area NOT NULL,
+    constraint tbl_unique unique(period, industry, area)
 );
 
 COMMIT;
