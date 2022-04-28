@@ -25,7 +25,7 @@ DO $$ BEGIN
         'Information',
         'Financial Activities',
         'Professional and Business Services',
-        'Educational and Health Services',
+        'Education and Health Services',
         'Leisure and Hospitality',
         'Other Services',
         'Government',
