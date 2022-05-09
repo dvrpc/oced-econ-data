@@ -1,5 +1,8 @@
+import calendar
 from datetime import date
-from typing import List, Optional
+from itertools import groupby
+from operator import itemgetter
+from typing import Dict, List, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,7 +62,9 @@ app.add_middleware(
 areas = ["United States", "DVRPC Region", "Philadelphia MSA", "Trenton MSA"]
 
 
-def get_data(table, area=None, start_year=None, end_year=None):
+def get_data(
+    table: str, area: str = None, start_year: int = None, end_year: int = None
+) -> List[RateResponse]:
     """Get data from *table*, with optional query parameters."""
     # build query, starting with base (all items), and then limit by query params
     query = "SELECT * FROM " + table
@@ -100,7 +105,67 @@ def get_data(table, area=None, start_year=None, end_year=None):
 
     data = []
     for row in result:
-        data.append({"period": row[0], "rate": row[1], "area": row[2]})
+        item = {"period": row[0], "rate": row[1], "area": row[2]}
+        data.append(RateResponse(**item))
+    return data
+
+
+def get_recent_matching_data(table: str, years: int = None) -> List[RateResponse]:
+    """
+    Get data only when it exists for all series per period.
+
+    For instance, for inflation, there is data every month for the U.S., but only every
+    two months for Philadelphia. get_data() would return two months of U.S. data per month
+    of Philadelphipa data, whereas this function only returns the months were data is
+    available for both the U.S. and Philadelphia.
+
+    A similar situation occurs because local data lags national data, so get_data() will often
+    return an additional leading month of national data compared to local data.
+
+    If *years* isn't provided, default to returning 1 year of data.
+    """
+
+    if not years:
+        years = 1
+
+    # set vars per table
+    # count: number of series in table (for subquery that gets only data that has *count*
+    #   items per period (i.e., if less than this, data not available for all series))
+    # periods:
+    #   inflation = bimonthly for 2 series, so 12 = 1 year of data
+    #   unemployment = monthly for 3 series, so 36 = 1 year of data
+    if table == "inflation_rate":
+        count = 2
+        periods = years * 12
+
+    if table == "unemployment_rate":
+        count = 3
+        periods = years * 36
+
+    query = f"""
+        SELECT * FROM {table}
+        WHERE period IN
+            (SELECT period FROM {table}
+                GROUP BY period
+                HAVING COUNT(area) = {count}
+            )
+        ORDER BY period DESC, area ASC
+        LIMIT {periods}
+    """
+
+    try:
+        with psycopg.connect(PG_CREDS) as conn:
+            result = conn.execute(query).fetchall()
+    except psycopg.OperationalError:
+        raise EconDataError(500, "Database error")
+
+    if not result:
+        raise EconDataError(404, "No data available for given criteria.")
+
+    data = []
+    for row in result:
+        item = {"period": row[0], "rate": row[1], "area": row[2]}
+        data.append(RateResponse(**item))
     return data
 
 
@@ -113,7 +178,6 @@ def unemployment_rate(
     area: Optional[str] = None, start_year: Optional[int] = None, end_year: Optional[int] = None
 ):
     """Get the unemployment rate for the United States, Philadelphia MSA, and Trenton MSA."""
-
     try:
         data = get_data("unemployment_rate", area, start_year, end_year)
     except EconDataError as e:
@@ -121,7 +185,6 @@ def unemployment_rate(
             status_code=e.status_code,
             content={"message": e.message},
         )
-
     return data
 
 
@@ -137,7 +200,6 @@ def inflation_rate(
     Get the inflation rate (CPI, all urban consumers) for the United States and Philadelphia
     MSA. (Trenton MSA is not included in the BLS survey from which this data comes.)
     """
-
     try:
         data = get_data("inflation_rate", area, start_year, end_year)
     except EconDataError as e:
@@ -145,5 +207,107 @@ def inflation_rate(
             status_code=e.status_code,
             content={"message": e.message},
         )
-
     return data
+
+
+@app.get(
+    "/api/econ-data/v1/unemployment-recent",
+    response_model=List[RateResponse],
+    responses=responses,
+)
+def recent_unemployment_rates(years: Optional[int] = None):
+    """
+    Get the most recent unemployment rate for the United States, Philadelphia MSA, and Trenton MSA where data is available for all areas.
+    """
+    try:
+        data = get_recent_matching_data("unemployment_rate", years)
+    except EconDataError as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": e.message},
+        )
+    return data
+
+
+@app.get(
+    "/api/econ-data/v1/inflation-recent",
+    response_model=List[RateResponse],
+    responses=responses,
+)
+def recent_inflation_rates(years: Optional[int] = None):
+    """
+    Get the most recent inflation rate (CPI, all urban consumers) for the United States and
+    Philadelphia MSA where data is available for both areas. (Trenton MSA is not included in the
+    BLS survey from which this data comes.)
+    """
+    try:
+        data = get_recent_matching_data("inflation_rate", years)
+    except EconDataError as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": e.message},
+        )
+    return data
+
+
+@app.get(
+    "/api/econ-data/v1/employment-by-industry",
+    response_model=Dict,
+    responses=responses,
+)
+def employment_by_industry():
+    """
+    Get the most recent employment, and year-over-year absolute and percentage change, by industry
+    for the Philaladelphia and Trenton MSAs.
+    """
+    query = "SELECT * FROM employment_by_industry ORDER BY period DESC, industry ASC"
+
+    try:
+        with psycopg.connect(PG_CREDS) as conn:
+            result = conn.execute(query).fetchall()
+    except psycopg.OperationalError:
+        raise EconDataError(500, "Database error")
+
+    if not result:
+        raise EconDataError(404, "No data available for given criteria.")
+
+    data = []
+    for row in result:
+        data.append({"period": row[0], "number": row[1], "industry": row[2], "area": row[3]})
+
+    # get most recent period and one year before that, get data for just those periods
+    most_recent = data[0]["period"]
+    year_ago = date(most_recent.year - 1, most_recent.month, most_recent.day)
+    most_recent_data = [record for record in data if record["period"] == most_recent]
+    year_ago_data = [record for record in data if record["period"] == year_ago]
+
+    # use groupby with itemgetter to reshape the data
+    # <https://www.geeksforgeeks.org/group-list-of-dictionary-data-by-particular-key-in-python/>
+
+    most_recent_data_by_industry = {}
+    for key, value in groupby(most_recent_data, key=itemgetter("industry")):
+        values = list(value)
+        area = {}
+        area[values[0]["area"]] = {"number": values[0]["number"]}
+        area[values[1]["area"]] = {"number": values[1]["number"]}
+        most_recent_data_by_industry[key] = area
+
+    year_ago_data_by_industry = {}
+    for key, value in groupby(year_ago_data, key=itemgetter("industry")):
+        values = list(value)
+        area = {}
+        area[values[0]["area"]] = {"number": values[0]["number"]}
+        area[values[1]["area"]] = {"number": values[1]["number"]}
+        year_ago_data_by_industry[key] = area
+
+    most_recent_friendly_date = calendar.month_abbr[most_recent.month] + " " + str(most_recent.year)
+    year_ago_friendly_date = calendar.month_abbr[year_ago.month] + " " + str(year_ago.year)
+
+    summary_data = {
+        most_recent_friendly_date: most_recent_data_by_industry,
+        year_ago_friendly_date: year_ago_data_by_industry,
+    }
+
+    # TODO: include absolute change and percent change
+
+    return summary_data

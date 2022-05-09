@@ -1,7 +1,7 @@
 """
-Fetch unemployment data (CPS) from BLS's API.
+Fetch employment by industry data (CES) from BLS's API.
 
-If --csv is passed to the program (python3 unemployment.py --csv), it will create a CSV of
+If --csv is passed to the program (python3 industry_employment.py --csv), it will create a CSV of
 the fetched data. Otherwise, it will insert it into the database specified in the PG_CREDS
 variable in config.py.
 """
@@ -12,6 +12,7 @@ from datetime import date
 import json
 from pathlib import Path
 import sys
+from typing import List
 
 import psycopg
 import requests
@@ -29,15 +30,34 @@ if args.csv:
 else:
     from config import PG_CREDS
 
-us = "LNS14000000"
-philadelphia = "LAUMT423798000000003"
-trenton = "LAUMT344594000000003"
+
+trenton = "SMU3445940"
+philadelphia = "SMU4237980"
+
+industries = {
+    "0000000001": "Total Nonfarm",
+    "1500000001": "Mining, Logging, and Construction",
+    "3000000001": "Manufacturing",
+    "4000000001": "Trade, Transportation, and Utilities",
+    "5000000001": "Information",
+    "5500000001": "Financial Activities",
+    "6000000001": "Professional and Business Services",
+    "6500000001": "Education and Health Services",
+    "7000000001": "Leisure and Hospitality",
+    "8000000001": "Other Services",
+    "9000000001": "Government",
+}
+
+series: List = []
+for industry in industries.keys():
+    series.append(trenton + industry)
+    series.append(philadelphia + industry)
 
 # Get data from API
 headers = {"Content-type": "application/json"}
 data = json.dumps(
     {
-        "seriesid": [us, philadelphia, trenton],
+        "seriesid": series,
         "startyear": "2013",
         "endyear": "2022",
         "registrationkey": BLS_API_KEY,
@@ -57,12 +77,11 @@ if args.csv:
 try:
     with psycopg.connect(PG_CREDS) as conn:
         for series in json_data["Results"]["series"]:
-            if series["seriesID"] == us:
-                area = "United States"
-            if series["seriesID"] == philadelphia:
-                area = "Philadelphia MSA"
-            if series["seriesID"] == trenton:
+            if series["seriesID"][:10] == trenton:
                 area = "Trenton MSA"
+            if series["seriesID"][:10] == philadelphia:
+                area = "Philadelphia MSA"
+            industry = industries[series["seriesID"][10:]]
 
             for record in series["data"]:
                 period = date.fromisoformat(
@@ -70,18 +89,19 @@ try:
                 )
 
                 if args.csv:
-                    cleaned_data.append([period, record["value"], area])
+                    cleaned_data.append([period, record["value"], industry, area])
                 else:
                     conn.execute(
                         """
-                        INSERT INTO unemployment_rate
-                        (period, rate, area)
-                        VALUES (%s, %s, %s)
+                        INSERT INTO employment_by_industry
+                        (period, number, industry, area)
+                        VALUES (%s, %s, %s, %s)
                         ON CONFLICT DO NOTHING
                     """,
                         (
                             period,
                             record["value"],
+                            industry,
                             area,
                         ),
                     )
@@ -95,9 +115,9 @@ if args.csv:
     except FileExistsError:
         pass
 
-    with open(results_dir + "/unemployment.csv", "w", newline="") as f:
+    with open("results/industry_employment.csv", "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["date", "value", "area"])
+        writer.writerow(["period", "value", "industry", "area"])
         writer.writerows(cleaned_data)
 
     print("CSV created in results/ directory.")

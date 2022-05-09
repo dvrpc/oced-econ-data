@@ -2,7 +2,8 @@
 *.swo
 ve/
 ve_dev/
-data/pandas_results/
+*pandas_results/
+*results/
 config.py
 
 # Byte-compiled / optimized / DLL files

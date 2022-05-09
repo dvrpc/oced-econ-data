@@ -1,3 +1,4 @@
+name: economic_update
 channels:
   - conda-forge
   - jmcmurray
@@ -7,8 +8,6 @@ dependencies:
   - prettytable
   - pandas
   - python==3.9
+  - pip
   - jmcmurray:
     - os
-  - pip:
-    - bls-data
-    - python-dotenv

@@ -19,17 +19,17 @@ END $$;
 
 DO $$ BEGIN
     CREATE TYPE industry_group AS ENUM (
-        'Mining, logging, and construction',
+        'Mining, Logging, and Construction',
         'Manufacturing',
-        'Trade, transportation, and utilities',
+        'Trade, Transportation, and Utilities',
         'Information',
-        'Financial activities',
-        'Professional and business services',
-        'Education and health services',
-        'Leisure and hospitality',
-        'Other services',
+        'Financial Activities',
+        'Professional and Business Services',
+        'Education and Health Services',
+        'Leisure and Hospitality',
+        'Other Services',
         'Government',
-        'Total'
+        'Total Nonfarm'
     );
 EXCEPTION
     WHEN duplicate_object THEN null;
@@ -39,28 +39,31 @@ END $$;
 CREATE TABLE IF NOT EXISTS inflation_rate (
     period DATE NOT NULL,
     rate REAL NOT NULL,
-    area geographic_area NOT NULL
+    area geographic_area NOT NULL,
+    constraint inflation_unique unique(period, area)
 );
 
 CREATE TABLE IF NOT EXISTS unemployment_rate (
     period DATE NOT NULL,
     rate REAL NOT NULL,
-    area geographic_area NOT NULL
+    area geographic_area NOT NULL,
+    constraint unemployment_unique unique(period, area)
 );
 
 CREATE TABLE IF NOT EXISTS housing (
     period DATE NOT NULL,
     units SMALLINT,
     rate REAL NOT NULL,
-    area geographic_area NOT NULL
+    area geographic_area NOT NULL,
+    constraint housing_unique unique(period, area)
 );
 
 CREATE TABLE IF NOT EXISTS employment_by_industry (
     period DATE NOT NULL,
     number REAL NOT NULL,
-    share REAL NOT NULL,
     industry industry_group NOT NULL,
-    area geographic_area NOT NULL
+    area geographic_area NOT NULL,
+    constraint industry_unique unique(period, industry, area)
 );
 
 COMMIT;
