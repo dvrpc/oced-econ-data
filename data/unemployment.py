@@ -69,20 +69,43 @@ try:
                     record["year"] + "-" + (str(record["period"][1:]) + "-01")
                 )
 
+                # determine if preliminary data
+                for each in record["footnotes"]:
+                    if each.get("code") == "P":
+                        preliminary = True
+                    else:
+                        preliminary = False
+
                 if args.csv:
                     cleaned_data.append([period, record["value"], area])
                 else:
+                    # Insert new record or update rate/prelim if data is no longer preliminary.
+                    # Further explanation:
+                    # If a conflict on PERIOD and AREA (i.e. already a record for that
+                    # period/area), then update the values for RATE and PRELIMINARY
+                    # **if and only if**
+                    # the previous value for PRELIMINARY (unemployment_rate.preliminary) was true
+                    # and current value for PRELIMINARY (excluded.preliminary) is false
                     conn.execute(
                         """
                         INSERT INTO unemployment_rate
-                        (period, rate, area)
-                        VALUES (%s, %s, %s)
-                        ON CONFLICT DO NOTHING
+                        (period, rate, area, preliminary)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (period, area)
+                        DO UPDATE
+                        SET
+                            rate = %s,
+                            preliminary = 'f'
+                        WHERE
+                            unemployment_rate.preliminary = 't' AND
+                            excluded.preliminary = 'f'
                     """,
                         (
                             period,
                             record["value"],
                             area,
+                            preliminary,
+                            record["value"],
                         ),
                     )
 except psycopg.OperationalError:

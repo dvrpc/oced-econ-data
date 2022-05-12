@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS inflation_rate (
     period DATE NOT NULL,
     rate REAL NOT NULL,
     area geographic_area NOT NULL,
+    preliminary boolean NOT NULL,
     constraint inflation_unique unique(period, area)
 );
 
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS unemployment_rate (
     period DATE NOT NULL,
     rate REAL NOT NULL,
     area geographic_area NOT NULL,
+    preliminary boolean NOT NULL,
     constraint unemployment_unique unique(period, area)
 );
 
