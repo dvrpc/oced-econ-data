@@ -89,20 +89,20 @@ try:
                 )
 
                 if args.csv:
-                    cleaned_data.append([period, record["value"], industry, area])
+                    cleaned_data.append([period, area, industry, record["value"]])
                 else:
                     conn.execute(
                         """
                         INSERT INTO employment_by_industry
-                        (period, number, industry, area)
+                        (period, area, industry, number)
                         VALUES (%s, %s, %s, %s)
                         ON CONFLICT DO NOTHING
                     """,
                         (
                             period,
-                            record["value"],
-                            industry,
                             area,
+                            industry,
+                            record["value"],
                         ),
                     )
 except psycopg.OperationalError:
@@ -117,7 +117,7 @@ if args.csv:
 
     with open("results/industry_employment.csv", "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["period", "value", "industry", "area"])
+        writer.writerow(["period", "area", "industry", "jobs (thousands)"])
         writer.writerows(cleaned_data)
 
     print("CSV created in results/ directory.")

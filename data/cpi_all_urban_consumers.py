@@ -73,7 +73,7 @@ try:
                         preliminary = False
 
                 if args.csv:
-                    cleaned_data.append([period, record["value"], area])
+                    cleaned_data.append([period, area, record["value"], preliminary])
                 else:
                     # Insert new record or update rate/prelim if data is no longer preliminary.
                     # Further explanation:
@@ -85,7 +85,7 @@ try:
                     conn.execute(
                         """
                         INSERT INTO inflation_rate
-                        (period, rate, area, preliminary)
+                        (period, area, rate, preliminary)
                         VALUES (%s, %s, %s, %s)
                         ON CONFLICT (period, area)
                         DO UPDATE
@@ -98,8 +98,8 @@ try:
                     """,
                         (
                             period,
-                            record["value"],
                             area,
+                            record["value"],
                             preliminary,
                             record["value"],
                         ),
@@ -116,7 +116,7 @@ if args.csv:
 
     with open(results_dir + "/cpi.csv", "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["date", "value", "area"])
+        writer.writerow(["period", "area", "rate", "preliminary data"])
         writer.writerows(cleaned_data)
 
     print("CSV created in results/ directory.")

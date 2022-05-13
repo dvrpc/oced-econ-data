@@ -38,33 +38,33 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS inflation_rate (
     period DATE NOT NULL,
-    rate REAL NOT NULL,
     area geographic_area NOT NULL,
+    rate REAL NOT NULL,
     preliminary boolean NOT NULL,
     constraint inflation_unique unique(period, area)
 );
 
 CREATE TABLE IF NOT EXISTS unemployment_rate (
     period DATE NOT NULL,
-    rate REAL NOT NULL,
     area geographic_area NOT NULL,
+    rate REAL NOT NULL,
     preliminary boolean NOT NULL,
     constraint unemployment_unique unique(period, area)
 );
 
 CREATE TABLE IF NOT EXISTS housing (
     period DATE NOT NULL,
+    area geographic_area NOT NULL,
     units SMALLINT,
     rate REAL NOT NULL,
-    area geographic_area NOT NULL,
     constraint housing_unique unique(period, area)
 );
 
 CREATE TABLE IF NOT EXISTS employment_by_industry (
     period DATE NOT NULL,
-    number REAL NOT NULL,
-    industry industry_group NOT NULL,
     area geographic_area NOT NULL,
+    industry industry_group NOT NULL,
+    number REAL NOT NULL,
     constraint industry_unique unique(period, industry, area)
 );
 
