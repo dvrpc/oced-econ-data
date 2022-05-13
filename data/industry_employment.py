@@ -88,20 +88,40 @@ try:
                     record["year"] + "-" + (str(record["period"][1:]) + "-01")
                 )
 
+                # determine if preliminary data
+                for each in record["footnotes"]:
+                    preliminary = True if each.get("code") == "P" else False
+
                 if args.csv:
-                    cleaned_data.append([period, area, industry, record["value"]])
+                    cleaned_data.append([period, area, industry, record["value"], preliminary])
                 else:
+                    # Insert new record or update rate/prelim if data is no longer preliminary.
+                    # Further explanation:
+                    # If a conflict on PERIOD and AREA (i.e. already a record for that
+                    # period/area), then update the values for RATE and PRELIMINARY
+                    # **if and only if**
+                    # previous value for PRELIMINARY (employment_by_industry.preliminary) was true
+                    # and current value for PRELIMINARY (excluded.preliminary) is false
                     conn.execute(
                         """
                         INSERT INTO employment_by_industry
-                        (period, area, industry, number)
-                        VALUES (%s, %s, %s, %s)
-                        ON CONFLICT DO NOTHING
+                        (period, area, industry, number, preliminary)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (period, area, industry)
+                        DO UPDATE
+                        SET
+                            number = %s,
+                            preliminary = 'f'
+                        WHERE
+                            employment_by_industry.preliminary = 't' AND
+                            excluded.preliminary = 'f'
                     """,
                         (
                             period,
                             area,
                             industry,
+                            record["value"],
+                            preliminary,
                             record["value"],
                         ),
                     )
@@ -117,7 +137,7 @@ if args.csv:
 
     with open("results/industry_employment.csv", "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["period", "area", "industry", "jobs (thousands)"])
+        writer.writerow(["period", "area", "industry", "jobs (thousands)", "preliminary data"])
         writer.writerows(cleaned_data)
 
     print("CSV created in results/ directory.")
