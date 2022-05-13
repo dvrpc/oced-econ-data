@@ -67,10 +67,7 @@ try:
 
                 # determine if preliminary data
                 for each in record["footnotes"]:
-                    if each.get("code") == "P":
-                        preliminary = True
-                    else:
-                        preliminary = False
+                    preliminary = True if each.get("code") == "P" else False
 
                 if args.csv:
                     cleaned_data.append([period, area, record["value"], preliminary])
