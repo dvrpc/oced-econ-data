@@ -23,3 +23,12 @@ For those scripts that use the BLS API (all but housing.py), an API key is neces
 ```python
 BLS_API_KEY = "your_API_key_goes_within_these_quotes"
 ```
+
+For a quick reference to the data returned by the BLS API, add the series at the end of this URL: <https://api.bls.gov/publicAPI/v2/timeseries/data/SERIES_GOES_HERE>.
+
+Information about the sources of the BLS data:
+  * CPI: <https://www.bls.gov/cpi/overview.htm>
+  * State and Metro Area Employment, Hours, & Earnings: <https://www.bls.gov/sae/>
+  * CPS: <https://www.bls.gov/cps/>
+  * Local Area Unemployment Statistics: <https://www.bls.gov/lau/>
+  * Further information on BLS data series can be found here: <https://www.bls.gov/help/hlpforma.htm>
