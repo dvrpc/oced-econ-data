@@ -1,5 +1,7 @@
 """
-Fetch inflation data (CPI) from BLS's API.
+Fetch inflation data (CPI) from BLS's API. 
+
+The base period for the index is 1982-84 (= 100).
 
 If --csv is passed to the program (python3 cpi_all_urban_consumers.py --csv), it will create a
 CSV of the fetched data. Otherwise, it will insert it into the database specified in the PG_CREDS
