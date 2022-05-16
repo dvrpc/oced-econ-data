@@ -36,12 +36,12 @@ EXCEPTION
     raise notice 'type "industry_group" already exists, skipping';
 END $$;
 
-CREATE TABLE IF NOT EXISTS inflation_rate (
+CREATE TABLE IF NOT EXISTS cpi (
     period DATE NOT NULL,
     area geographic_area NOT NULL,
-    rate REAL NOT NULL,
+    idx REAL NOT NULL,
     preliminary boolean NOT NULL,
-    constraint inflation_unique unique(period, area)
+    constraint cpi_unique unique(period, area)
 );
 
 CREATE TABLE IF NOT EXISTS unemployment_rate (

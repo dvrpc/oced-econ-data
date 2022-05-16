@@ -1,5 +1,5 @@
 """
-Fetch inflation data (CPI) from BLS's API. 
+Fetch CPI (all urban consumers) data from BLS's API.
 
 The base period for the index is 1982-84 (= 100).
 
@@ -74,25 +74,25 @@ try:
                 if args.csv:
                     cleaned_data.append([period, area, record["value"], preliminary])
                 else:
-                    # Insert new record or update rate/prelim if data is no longer preliminary.
+                    # Insert new record or update idx/prelim if data is no longer preliminary.
                     # Further explanation:
                     # If a conflict on PERIOD and AREA (i.e. already a record for that
-                    # period/area), then update the values for RATE and PRELIMINARY
+                    # period/area), then update the values for IDX and PRELIMINARY
                     # **if and only if**
-                    # the previous value for PRELIMINARY (inflation_rate.preliminary) was true
+                    # the previous value for PRELIMINARY (cpi.preliminary) was true
                     # and current value for PRELIMINARY (excluded.preliminary) is false
                     conn.execute(
                         """
-                        INSERT INTO inflation_rate
-                        (period, area, rate, preliminary)
+                        INSERT INTO cpi
+                        (period, area, idx, preliminary)
                         VALUES (%s, %s, %s, %s)
                         ON CONFLICT (period, area)
                         DO UPDATE
                         SET
-                            rate = %s,
+                            idx = %s,
                             preliminary = 'f'
                         WHERE
-                            inflation_rate.preliminary = 't' AND
+                            cpi.preliminary = 't' AND
                             excluded.preliminary = 'f'
                     """,
                         (
@@ -115,7 +115,7 @@ if args.csv:
 
     with open(results_dir + "/cpi.csv", "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["period", "area", "rate", "preliminary data"])
+        writer.writerow(["period", "area", "index (1982-84=100)", "preliminary data"])
         writer.writerows(cleaned_data)
 
     print("CSV created in results/ directory.")
