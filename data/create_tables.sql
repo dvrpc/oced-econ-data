@@ -54,11 +54,8 @@ CREATE TABLE IF NOT EXISTS unemployment_rate (
 );
 
 CREATE TABLE IF NOT EXISTS housing (
-    period DATE NOT NULL,
-    area geographic_area NOT NULL,
-    units SMALLINT,
-    rate REAL NOT NULL,
-    constraint housing_unique unique(period, area)
+    period DATE PRIMARY KEY,
+    units SMALLINT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS employment_by_industry (

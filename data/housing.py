@@ -1,14 +1,33 @@
 """
 Combine county-level authorized housing units into region-wide total from monthly data provided
 via text files by U.S. Dept. of Census.
+
+If --csv is passed to the program (python3 unemployment.py --csv), it will create a CSV of
+the fetched data. Otherwise, it will insert it into the database specified in the PG_CREDS
+variable in config.py.
 """
 
+import argparse
+import csv
+from datetime import date
+from pathlib import Path
+import sys
 
 from bs4 import BeautifulSoup
 import pandas as pd
-import numpy as np
+import psycopg
 import requests
-import sys
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--csv", action="store_true")
+args = parser.parse_args()
+
+# we don't need a database connection if just trying to create a CSV
+if args.csv:
+    PG_CREDS = ""
+else:
+    from config import PG_CREDS
 
 # get the county data filenames
 url_to_scrape = "https://www2.census.gov/econ/bps/County/?C=N;O=D"
@@ -18,7 +37,6 @@ if r.status_code != 200:
     sys.exit(f"Unable to get {url_to_scrape}")
 
 soup = BeautifulSoup(r.text, features="html.parser")
-
 table = soup.find("table")
 
 county_files = []
@@ -29,7 +47,6 @@ for row in table.find_all("tr"):
             if cell.a.string.endswith("c.txt"):
                 county_files.append(cell.a.string)
 
-# just get the last 36 months of files
 county_files = county_files[:36]
 
 reg_header_list = [
@@ -65,7 +82,6 @@ reg_header_list = [
     "rep_permitVal_5punits",
 ]
 
-
 reg_df_list = []
 
 for file in county_files:
@@ -86,30 +102,51 @@ for file in county_files:
         )
     )
 
-
-# Concatenate DFs
 reg_df = pd.concat(reg_df_list)
-
-# Combine State and County FIPS column
 reg_df["FIPS"] = reg_df["State_FIPS"] + reg_df["County_FIPS"]
-
-# Region FIPS
 regionFIPS = ["34005", "34007", "34015", "34021", "42017", "42029", "42045", "42091", "42101"]
-
-# Select Region
 region = reg_df.loc[reg_df["FIPS"].isin(regionFIPS)]
-
-# Calculate total units authorized
 region["total_units"] = (
     region["units_1unit"]
     + region["units_2units"]
     + region["units_3to4units"]
     + region["units_5punits"]
 )
-
-
-# Group by Date
 region = region[["Date", "total_units"]]
 region_grouped = region.groupby("Date").sum()
-region_grouped["geography"] = "Region"
-print(region_grouped)
+
+data = []
+for row in region_grouped.itertuples():
+    data.append([date.fromisoformat((str(row[0])[:4] + "-" + str(row[0])[4:] + "-01")), row[1]])
+
+# enter into db or create CSV
+if not args.csv:
+    try:
+        with psycopg.connect(PG_CREDS) as conn:
+            for record in data:
+                conn.execute(
+                    """
+                        INSERT INTO housing (period, units)
+                        VALUES (%s, %s)
+                        ON CONFLICT DO NOTHING
+                    """,
+                    (
+                        record[0],
+                        record[1],
+                    ),
+                )
+    except psycopg.OperationalError:
+        sys.exit("Database error.")
+else:
+    results_dir = "results"
+    try:
+        Path(results_dir).mkdir()
+    except FileExistsError:
+        pass
+
+    with open(results_dir + "/housing.csv", "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["period", "units"])
+        writer.writerows(data)
+
+    print("CSV created in results/ directory.")
