@@ -348,11 +348,7 @@ def employment_by_industry():
     responses=responses,
 )
 def housing(start_year: Optional[int] = None, end_year: Optional[int] = None):
-    """
-    Get the CPI for All Urban Consumers index (1982-84=100) and year-over-year percentage change
-    for the United States and Philadelphia MSA. (Trenton MSA is not included in the BLS survey
-    from which this data comes.)
-    """
+    """Get the total number of authorized housing units for the DVRPC Region by month."""
     try:
         data = get_data("housing", None, start_year, end_year)
     except EconDataError as e:
