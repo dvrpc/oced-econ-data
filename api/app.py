@@ -27,6 +27,11 @@ class IndexRateResponse(BaseModel):
     rate: Union[float, None]
 
 
+class UnitsResponse(BaseModel):
+    period: date
+    units: int
+
+
 class Error(BaseModel):
     message: str
 
@@ -71,7 +76,7 @@ areas = ["United States", "DVRPC Region", "Philadelphia MSA", "Trenton MSA"]
 
 def get_data(
     table: str, area: str = None, start_year: int = None, end_year: int = None
-) -> List[Union[RateResponse, IndexRateResponse]]:
+) -> List[Union[RateResponse, IndexRateResponse, UnitsResponse]]:
     """Get data from *table*, with optional query parameters."""
     # build query, starting with base (all items), and then limit by query params
     query = "SELECT * FROM " + table
@@ -99,7 +104,8 @@ def get_data(
     if q_modifiers:
         query += " WHERE " + " AND ".join(q_modifiers)
 
-    query += " ORDER BY period, area ASC"
+    if table in ["cpi", "unemployment_rate"]:
+        query += " ORDER BY period, area ASC"
 
     try:
         with psycopg.connect(PG_CREDS) as conn:
@@ -118,6 +124,9 @@ def get_data(
         elif table == "unemployment_rate":
             item = {"period": row[0], "area": row[1], "rate": row[2]}
             data.append(RateResponse(**item))
+        elif table == "housing":
+            item = {"period": row[0], "units": row[1]}
+            data.append(UnitsResponse(**item))
     return data
 
 
@@ -331,3 +340,24 @@ def employment_by_industry():
     # TODO: include absolute change and percent change
 
     return summary_data
+
+
+@app.get(
+    "/api/econ-data/v1/housing",
+    response_model=List[UnitsResponse],
+    responses=responses,
+)
+def housing(start_year: Optional[int] = None, end_year: Optional[int] = None):
+    """
+    Get the CPI for All Urban Consumers index (1982-84=100) and year-over-year percentage change
+    for the United States and Philadelphia MSA. (Trenton MSA is not included in the BLS survey
+    from which this data comes.)
+    """
+    try:
+        data = get_data("housing", None, start_year, end_year)
+    except EconDataError as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": e.message},
+        )
+    return data
