@@ -1,10 +1,36 @@
-# Author: Brian Carney
-# Purpose: This script cleans the housing units authorized data to be used for the region's monthly economic update.
+"""
+Combine county-level authorized housing units into region-wide total from monthly data provided
+via text files by U.S. Dept. of Census.
+"""
 
-# Import packages
+
+from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
+import requests
+import sys
 
+# get the county data filenames
+url_to_scrape = "https://www2.census.gov/econ/bps/County/?C=N;O=D"
+r = requests.get(url_to_scrape)
+
+if r.status_code != 200:
+    sys.exit(f"Unable to get {url_to_scrape}")
+
+soup = BeautifulSoup(r.text, features="html.parser")
+
+table = soup.find("table")
+
+county_files = []
+
+for row in table.find_all("tr"):
+    for cell in row:
+        if cell.a:
+            if cell.a.string.endswith("c.txt"):
+                county_files.append(cell.a.string)
+
+# just get the last 36 months of files
+county_files = county_files[:36]
 
 reg_header_list = [
     "Date",
@@ -39,30 +65,13 @@ reg_header_list = [
     "rep_permitVal_5punits",
 ]
 
-files = [
-    "https://www2.census.gov/econ/bps/County/co2203c.txt",
-    "https://www2.census.gov/econ/bps/County/co2202c.txt",
-    "https://www2.census.gov/econ/bps/County/co2201c.txt",
-    "https://www2.census.gov/econ/bps/County/co2112c.txt",
-    "https://www2.census.gov/econ/bps/County/co2111c.txt",
-    "https://www2.census.gov/econ/bps/County/co2110c.txt",
-    "https://www2.census.gov/econ/bps/County/co2109c.txt",
-    "https://www2.census.gov/econ/bps/County/co2108c.txt",
-    "https://www2.census.gov/econ/bps/County/co2107c.txt",
-    "https://www2.census.gov/econ/bps/County/co2106c.txt",
-    "https://www2.census.gov/econ/bps/County/co2105c.txt",
-    "https://www2.census.gov/econ/bps/County/co2104c.txt",
-    "https://www2.census.gov/econ/bps/County/co2103c.txt",
-    "https://www2.census.gov/econ/bps/County/co2102c.txt",
-    "https://www2.census.gov/econ/bps/County/co2101c.txt",
-]
 
 reg_df_list = []
 
-for file in files:
+for file in county_files:
     reg_df_list.append(
         pd.read_csv(
-            file,
+            "https://www2.census.gov/econ/bps/County/" + file,
             dtype={
                 "State_FIPS": str,
                 "County_FIPS": str,
