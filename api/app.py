@@ -20,10 +20,11 @@ class RateResponse(BaseModel):
     rate: float
 
 
-class IndexResponse(BaseModel):
+class IndexRateResponse(BaseModel):
     period: date
     area: str
     index: float
+    rate: Union[float, None]
 
 
 class Error(BaseModel):
@@ -70,7 +71,7 @@ areas = ["United States", "DVRPC Region", "Philadelphia MSA", "Trenton MSA"]
 
 def get_data(
     table: str, area: str = None, start_year: int = None, end_year: int = None
-) -> List[Union[RateResponse, IndexResponse]]:
+) -> List[Union[RateResponse, IndexRateResponse]]:
     """Get data from *table*, with optional query parameters."""
     # build query, starting with base (all items), and then limit by query params
     query = "SELECT * FROM " + table
@@ -112,8 +113,8 @@ def get_data(
     data = []
     for row in result:
         if table == "cpi":
-            item = {"period": row[0], "area": row[1], "index": row[2]}
-            data.append(IndexResponse(**item))
+            item = {"period": row[0], "area": row[1], "index": row[2], "rate": row[3]}
+            data.append(IndexRateResponse(**item))
         elif table == "unemployment_rate":
             item = {"period": row[0], "area": row[1], "rate": row[2]}
             data.append(RateResponse(**item))
@@ -122,7 +123,7 @@ def get_data(
 
 def get_recent_matching_data(
     table: str, years: int = None
-) -> List[Union[RateResponse, IndexResponse]]:
+) -> List[Union[RateResponse, IndexRateResponse]]:
     """
     Get data only when it exists for all series per period.
 
@@ -177,8 +178,8 @@ def get_recent_matching_data(
     data = []
     for row in result:
         if table == "cpi":
-            item = {"period": row[0], "area": row[1], "index": row[2]}
-            data.append(IndexResponse(**item))
+            item = {"period": row[0], "area": row[1], "index": row[2], "rate": row[3]}
+            data.append(IndexRateResponse(**item))
         elif table == "unemployment_rate":
             item = {"period": row[0], "area": row[1], "rate": row[2]}
             data.append(RateResponse(**item))
@@ -206,17 +207,16 @@ def unemployment_rate(
 
 @app.get(
     "/api/econ-data/v1/cpi",
-    response_model=List[IndexResponse],
+    response_model=List[IndexRateResponse],
     responses=responses,
 )
 def cpi(
     area: Optional[str] = None, start_year: Optional[int] = None, end_year: Optional[int] = None
 ):
     """
-    Get the CPI (all urban consumers) index for the United States and Philadelphia MSA. (Trenton
-    MSA is not included in the BLS survey from which this data comes.)
-
-    1980-82 = 100
+    Get the CPI for All Urban Consumers index (1982-84=100) and year-over-year percentage change
+    for the United States and Philadelphia MSA. (Trenton MSA is not included in the BLS survey
+    from which this data comes.)
     """
     try:
         data = get_data("cpi", area, start_year, end_year)
@@ -250,14 +250,14 @@ def recent_unemployment_rates(years: Optional[int] = None):
 
 @app.get(
     "/api/econ-data/v1/cpi-recent",
-    response_model=List[IndexResponse],
+    response_model=List[IndexRateResponse],
     responses=responses,
 )
 def recent_cpi(years: Optional[int] = None):
     """
-    Get the most recent CPI (all urban consumers) index for the United States and
-    Philadelphia MSA where data is available for both areas. (Trenton MSA is not included in the
-    BLS survey from which this data comes.)
+    Get the most recent CPI for All Urban Consumers index (1982-84=100) and year-over-year
+    percentage change for the United States and Philadelphia MSA, where data is available for both
+    areas. (Trenton MSA is not included in the BLS survey from which this data comes.)
     """
     try:
         data = get_recent_matching_data("cpi", years)

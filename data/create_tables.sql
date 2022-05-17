@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS cpi (
     period DATE NOT NULL,
     area geographic_area NOT NULL,
     idx REAL NOT NULL,
+    rate REAL,
     preliminary boolean NOT NULL,
     constraint cpi_unique unique(period, area)
 );
