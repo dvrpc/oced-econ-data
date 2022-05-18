@@ -286,7 +286,7 @@ def recent_cpi(years: Optional[int] = None):
 )
 def employment_by_industry():
     """
-    Get the most recent employment, and year-over-year absolute and percentage change, by industry
+    Get the most recent employment, and 1- and 2-year change/percentage change, by industry
     for the Philaladelphia and Trenton MSAs.
     """
     query = "SELECT * FROM employment_by_industry ORDER BY period DESC, industry ASC"
@@ -302,9 +302,20 @@ def employment_by_industry():
 
     data = []
     for row in result:
-        data.append({"period": row[0], "number": row[1], "industry": row[2], "area": row[3]})
+        data.append(
+            {
+                "period": row[0],
+                "area": row[1],
+                "industry": row[2],
+                "number": row[3],
+                "one-year change": row[4],
+                "one-year percent change": row[5],
+                "two-year change": row[6],
+                "two-year percent change": row[7],
+            }
+        )
 
-    # get most recent period and one year before that, get data for just those periods
+    # get most recent period and one year before that; data for just those periods
     most_recent = data[0]["period"]
     year_ago = date(most_recent.year - 1, most_recent.month, most_recent.day)
     most_recent_data = [record for record in data if record["period"] == most_recent]
@@ -317,16 +328,40 @@ def employment_by_industry():
     for key, value in groupby(most_recent_data, key=itemgetter("industry")):
         values = list(value)
         area = {}
-        area[values[0]["area"]] = {"number": values[0]["number"]}
-        area[values[1]["area"]] = {"number": values[1]["number"]}
+        area[values[0]["area"]] = {
+            "employment": values[0]["number"],
+            "one-year change (number)": values[0]["one-year change"],
+            "one-year change (percent)": values[0]["one-year percent change"],
+            "two-year change (number)": values[0]["two-year change"],
+            "two-year change (percent)": values[0]["two-year percent change"],
+        }
+        area[values[1]["area"]] = {
+            "employment": values[1]["number"],
+            "one-year change (number)": values[1]["one-year change"],
+            "one-year change (percent)": values[1]["one-year percent change"],
+            "two-year change (number)": values[1]["two-year change"],
+            "two-year change (percent)": values[1]["two-year percent change"],
+        }
         most_recent_data_by_industry[key] = area
 
     year_ago_data_by_industry = {}
     for key, value in groupby(year_ago_data, key=itemgetter("industry")):
         values = list(value)
         area = {}
-        area[values[0]["area"]] = {"number": values[0]["number"]}
-        area[values[1]["area"]] = {"number": values[1]["number"]}
+        area[values[0]["area"]] = {
+            "employment": values[0]["number"],
+            "one-year change (number)": values[0]["one-year change"],
+            "one-year change (percent)": values[0]["one-year percent change"],
+            "two-year change (number)": values[0]["two-year change"],
+            "two-year change (percent)": values[0]["two-year percent change"],
+        }
+        area[values[1]["area"]] = {
+            "employment": values[1]["number"],
+            "one-year change (number)": values[1]["one-year change"],
+            "one-year change (percent)": values[1]["one-year percent change"],
+            "two-year change (number)": values[1]["two-year change"],
+            "two-year change (percent)": values[1]["two-year percent change"],
+        }
         year_ago_data_by_industry[key] = area
 
     most_recent_friendly_date = calendar.month_abbr[most_recent.month] + " " + str(most_recent.year)
@@ -336,8 +371,6 @@ def employment_by_industry():
         most_recent_friendly_date: most_recent_data_by_industry,
         year_ago_friendly_date: year_ago_data_by_industry,
     }
-
-    # TODO: include absolute change and percent change
 
     return summary_data
 
