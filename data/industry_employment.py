@@ -70,65 +70,134 @@ if p.status_code != 200:
 
 json_data = json.loads(p.text)
 
-if args.csv:
-    cleaned_data = []
+cleaned_data = []
 
-# go through results and either add to db or (for --csv), put into list for later
-try:
-    with psycopg.connect(PG_CREDS) as conn:
-        for series in json_data["Results"]["series"]:
-            if series["seriesID"][:10] == trenton:
-                area = "Trenton MSA"
-            if series["seriesID"][:10] == philadelphia:
-                area = "Philadelphia MSA"
-            industry = industries[series["seriesID"][10:]]
+for series in json_data["Results"]["series"]:
+    if series["seriesID"][:10] == trenton:
+        area = "Trenton MSA"
+    if series["seriesID"][:10] == philadelphia:
+        area = "Philadelphia MSA"
+    industry = industries[series["seriesID"][10:]]
 
-            for record in series["data"]:
-                period = date.fromisoformat(
-                    record["year"] + "-" + (str(record["period"][1:]) + "-01")
-                )
+    for record in series["data"]:
+        period = date.fromisoformat(record["year"] + "-" + (str(record["period"][1:]) + "-01"))
 
-                # determine if preliminary data
-                for each in record["footnotes"]:
-                    preliminary = True if each.get("code") == "P" else False
+        # determine if preliminary data
+        for each in record["footnotes"]:
+            preliminary = True if each.get("code") == "P" else False
 
-                if args.csv:
-                    cleaned_data.append([period, area, industry, record["value"], preliminary])
-                else:
-                    # Insert new record or update rate/prelim if data is no longer preliminary.
-                    # Further explanation:
-                    # If a conflict on PERIOD and AREA (i.e. already a record for that
-                    # period/area), then update the values for RATE and PRELIMINARY
-                    # **if and only if**
-                    # previous value for PRELIMINARY (employment_by_industry.preliminary) was true
-                    # and current value for PRELIMINARY (excluded.preliminary) is false
-                    conn.execute(
-                        """
-                        INSERT INTO employment_by_industry
-                        (period, area, industry, number, preliminary)
-                        VALUES (%s, %s, %s, %s, %s)
-                        ON CONFLICT (period, area, industry)
-                        DO UPDATE
-                        SET
-                            number = %s,
-                            preliminary = 'f'
-                        WHERE
-                            employment_by_industry.preliminary = 't' AND
-                            excluded.preliminary = 'f'
-                    """,
-                        (
-                            period,
+        cleaned_data.append(
+            {
+                "period": period,
+                "area": area,
+                "industry": industry,
+                "jobs": record["value"],
+                "preliminary": preliminary,
+            }
+        )
+
+for record in cleaned_data:
+    one_year_ago = date(record["period"].year - 1, record["period"].month, record["period"].day)
+    two_years_ago = date(record["period"].year - 2, record["period"].month, record["period"].day)
+    # get previous years' jobs, or None if not available (before start of data)
+    one_year_ago_jobs = next(
+        (
+            item["jobs"]
+            for item in cleaned_data
+            if item["period"] == one_year_ago
+            and item["area"] == record["area"]
+            and item["industry"] == record["industry"]
+        ),
+        None,
+    )
+    two_years_ago_jobs = next(
+        (
+            item["jobs"]
+            for item in cleaned_data
+            if item["period"] == two_years_ago
+            and item["area"] == record["area"]
+            and item["industry"] == record["industry"]
+        ),
+        None,
+    )
+    if type(one_year_ago_jobs) == type(None):
+        record["change1year"] = None
+        record["percentchange1year"] = None
+    else:
+        one_year_ago_jobs = float(one_year_ago_jobs)
+        change1year = float(record["jobs"]) - one_year_ago_jobs
+        percentchange1year = (change1year / one_year_ago_jobs) * 100
+        record["change1year"] = round(change1year, 2)
+        record["percentchange1year"] = round(percentchange1year, 1)
+    if type(two_years_ago_jobs) == type(None):
+        record["change2year"] = None
+        record["percentchange2year"] = None
+    else:
+        two_years_ago_jobs = float(two_years_ago_jobs)
+        change2year = float(record["jobs"]) - two_years_ago_jobs
+        percentchange2year = (change2year / two_years_ago_jobs) * 100
+        record["change2year"] = round(change2year, 2)
+        record["percentchange2year"] = round(percentchange2year, 1)
+
+# enter into db or create CSV
+if not args.csv:
+    try:
+        with psycopg.connect(PG_CREDS) as conn:
+            for record in cleaned_data:
+                # Insert new record or update rate/prelim if data is no longer preliminary.
+                # Further explanation:
+                # If a conflict on PERIOD and AREA (i.e. already a record for that
+                # period/area), then update the values for RATE and PRELIMINARY
+                # **if and only if**
+                # previous value for PRELIMINARY (employment_by_industry.preliminary) was true
+                # and current value for PRELIMINARY (excluded.preliminary) is false
+                conn.execute(
+                    """
+                    INSERT INTO employment_by_industry
+                        (   period,
                             area,
                             industry,
-                            record["value"],
-                            preliminary,
-                            record["value"],
-                        ),
-                    )
-except psycopg.OperationalError:
-    sys.exit("Database error.")
-
-if args.csv:
+                            number,
+                            change1year,
+                            percentchange1year,
+                            change2year,
+                            percentchange2year,
+                            preliminary
+                        )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (period, area, industry)
+                    DO UPDATE
+                    SET
+                        number = %s,
+                        change1year = %s,
+                        percentchange1year = %s,
+                        change2year = %s,
+                        percentchange2year = %s,
+                        preliminary = 'f'
+                    WHERE
+                        employment_by_industry.preliminary = 't' AND
+                        excluded.preliminary = 'f'
+                """,
+                    (
+                        record["period"],
+                        record["area"],
+                        record["industry"],
+                        record["jobs"],
+                        record["change1year"],
+                        record["percentchange1year"],
+                        record["change2year"],
+                        record["percentchange2year"],
+                        record["preliminary"],
+                        record["jobs"],
+                        record["change1year"],
+                        record["percentchange1year"],
+                        record["change2year"],
+                        record["percentchange2year"],
+                    ),
+                )
+    except psycopg.OperationalError:
+        sys.exit("Database error.")
+else:
     results_dir = "results"
     try:
         Path(results_dir).mkdir()
@@ -136,8 +205,31 @@ if args.csv:
         pass
 
     with open("results/industry_employment.csv", "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["period", "area", "industry", "jobs (thousands)", "preliminary data"])
+        fieldnames = [
+            "period",
+            "area",
+            "industry",
+            "jobs",
+            "change1year",
+            "percentchange1year",
+            "change2year",
+            "percentchange2year",
+            "preliminary",
+        ]
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        # customize header row to be more informative
+        header = [
+            "period",
+            "area",
+            "industry",
+            "jobs (thousands)",
+            "change (thousands, from 1 year ago)",
+            "change (%, from 1 year ago)",
+            "change (thousands, from 2 years ago)",
+            "change (%, from 2 years ago)",
+            "preliminary data",
+        ]
+        writer.writerow(dict(zip(fieldnames, header)))
         writer.writerows(cleaned_data)
 
     print("CSV created in results/ directory.")

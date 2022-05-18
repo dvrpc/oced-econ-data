@@ -63,6 +63,10 @@ CREATE TABLE IF NOT EXISTS employment_by_industry (
     area geographic_area NOT NULL,
     industry industry_group NOT NULL,
     number REAL NOT NULL,
+    change1year REAL,
+    percentchange1year REAL,
+    change2year REAL,
+    percentchange2year REAL,
     preliminary boolean NOT NULL,
     constraint industry_unique unique(period, industry, area)
 );
