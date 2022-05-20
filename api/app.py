@@ -364,8 +364,8 @@ def employment_by_industry():
         }
         year_ago_data_by_industry[key] = area
 
-    most_recent_friendly_date = calendar.month_abbr[most_recent.month] + " " + str(most_recent.year)
-    year_ago_friendly_date = calendar.month_abbr[year_ago.month] + " " + str(year_ago.year)
+    most_recent_friendly_date = calendar.month_name[most_recent.month] + " " + str(most_recent.year)
+    year_ago_friendly_date = calendar.month_name[year_ago.month] + " " + str(year_ago.year)
 
     summary_data = {
         most_recent_friendly_date: most_recent_data_by_industry,
