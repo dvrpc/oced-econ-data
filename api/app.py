@@ -342,7 +342,6 @@ def employment_by_industry():
 
         area[values[0]["area"]] = {
             "employment": values[0]["number"],
-            "total": most_recent_total[values[0]["area"]],
             "share of total": round(
                 (values[0]["number"] / most_recent_total[values[0]["area"]] * 100), 1
             ),
