@@ -321,6 +321,17 @@ def employment_by_industry():
     most_recent_data = [record for record in data if record["period"] == most_recent]
     year_ago_data = [record for record in data if record["period"] == year_ago]
 
+    # create a var for totals
+    most_recent_total = {}
+    for record in most_recent_data:
+        if record["industry"] == "Total Nonfarm":
+            most_recent_total[record["area"]] = record["number"]
+
+    year_ago_total = {}
+    for record in year_ago_data:
+        if record["industry"] == "Total Nonfarm":
+            year_ago_total[record["area"]] = record["number"]
+
     # use groupby with itemgetter to reshape the data
     # <https://www.geeksforgeeks.org/group-list-of-dictionary-data-by-particular-key-in-python/>
 
@@ -328,8 +339,13 @@ def employment_by_industry():
     for key, value in groupby(most_recent_data, key=itemgetter("industry")):
         values = list(value)
         area = {}
+
         area[values[0]["area"]] = {
             "employment": values[0]["number"],
+            "total": most_recent_total[values[0]["area"]],
+            "share of total": round(
+                (values[0]["number"] / most_recent_total[values[0]["area"]] * 100), 1
+            ),
             "one-year change (number)": values[0]["one-year change"],
             "one-year change (percent)": values[0]["one-year percent change"],
             "two-year change (number)": values[0]["two-year change"],
@@ -337,6 +353,9 @@ def employment_by_industry():
         }
         area[values[1]["area"]] = {
             "employment": values[1]["number"],
+            "share of total": round(
+                (values[1]["number"] / most_recent_total[values[1]["area"]] * 100), 1
+            ),
             "one-year change (number)": values[1]["one-year change"],
             "one-year change (percent)": values[1]["one-year percent change"],
             "two-year change (number)": values[1]["two-year change"],
@@ -350,6 +369,9 @@ def employment_by_industry():
         area = {}
         area[values[0]["area"]] = {
             "employment": values[0]["number"],
+            "share of total": round(
+                (values[0]["number"] / year_ago_total[values[0]["area"]] * 100), 1
+            ),
             "one-year change (number)": values[0]["one-year change"],
             "one-year change (percent)": values[0]["one-year percent change"],
             "two-year change (number)": values[0]["two-year change"],
@@ -357,6 +379,9 @@ def employment_by_industry():
         }
         area[values[1]["area"]] = {
             "employment": values[1]["number"],
+            "share of total": round(
+                (values[1]["number"] / year_ago_total[values[1]["area"]] * 100), 1
+            ),
             "one-year change (number)": values[1]["one-year change"],
             "one-year change (percent)": values[1]["one-year percent change"],
             "two-year change (number)": values[1]["two-year change"],
