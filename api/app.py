@@ -48,7 +48,7 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title="DVRPC Economic Data API",
         version="1.0",
-        description=("TK"),
+        description=("Various regional economic indicators."),
         routes=app.routes,
     )
     app.openapi_schema = openapi_schema
@@ -381,7 +381,7 @@ def employment_by_industry():
     responses=responses,
 )
 def housing(start_year: Optional[int] = None, end_year: Optional[int] = None):
-    """Get the total number of authorized housing units for the DVRPC Region by month."""
+    """Get the total number of new housing units authorized for the DVRPC Region by month."""
     try:
         data = get_data("housing", None, start_year, end_year)
     except EconDataError as e:
