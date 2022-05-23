@@ -48,7 +48,10 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title="DVRPC Economic Data API",
         version="1.0",
-        description=("Various regional economic indicators."),
+        description=(
+            "Various regional economic indicators. Where available, we provide data covering the "
+            "nine-county DVRPC region, and fall back to data at the MSA level if necessary."
+        ),
         routes=app.routes,
     )
     app.openapi_schema = openapi_schema
@@ -218,6 +221,7 @@ def unemployment_rate(
     "/api/econ-data/v1/cpi",
     response_model=List[IndexRateResponse],
     responses=responses,
+    summary="CPI",
 )
 def cpi(
     area: Optional[str] = None, start_year: Optional[int] = None, end_year: Optional[int] = None
@@ -261,6 +265,7 @@ def recent_unemployment_rates(years: Optional[int] = None):
     "/api/econ-data/v1/cpi-recent",
     response_model=List[IndexRateResponse],
     responses=responses,
+    summary="Recent CPI",
 )
 def recent_cpi(years: Optional[int] = None):
     """
