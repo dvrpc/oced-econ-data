@@ -58,8 +58,6 @@ headers = {"Content-type": "application/json"}
 data = json.dumps(
     {
         "seriesid": series,
-        "startyear": "2000",
-        "endyear": "2022",
         "registrationkey": BLS_API_KEY,
     }
 )
