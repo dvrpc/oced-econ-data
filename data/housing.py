@@ -31,7 +31,7 @@ else:
 
 # get the county data filenames
 url_to_scrape = "https://www2.census.gov/econ/bps/County/?C=N;O=D"
-r = requests.get(url_to_scrape)
+r = requests.get(url_to_scrape, verify=False)
 
 if r.status_code != 200:
     sys.exit(f"Unable to get {url_to_scrape}")
