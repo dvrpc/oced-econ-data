@@ -69,28 +69,31 @@ for file in county_files:
         for row in csv.reader(lines):
             # Only include rows that contain non-DVRPC counties.
             # Ignore data, by line, if there's an error in type or type conversion, but log it.
-            if row[1] + row[2] in [
-                "34005",
-                "34007",
-                "34015",
-                "34021",
-                "42017",
-                "42029",
-                "42045",
-                "42091",
-                "42101",
-            ]:
-                try:
-                    data[row[0]] = (
-                        data[row[0]] + int(row[7]) + int(row[10]) + int(row[13]) + int(row[16])
-                    )
-                except KeyError:
+            try:
+                if row[1] + row[2] in [
+                    "34005",
+                    "34007",
+                    "34015",
+                    "34021",
+                    "42017",
+                    "42029",
+                    "42045",
+                    "42091",
+                    "42101",
+                ]:
                     try:
-                        data[row[0]] = int(row[7]) + int(row[10]) + int(row[13]) + int(row[16])
+                        data[row[0]] = (
+                            data[row[0]] + int(row[7]) + int(row[10]) + int(row[13]) + int(row[16])
+                        )
+                    except KeyError:
+                        try:
+                            data[row[0]] = int(row[7]) + int(row[10]) + int(row[13]) + int(row[16])
+                        except Exception as e:
+                            logger.error(f"Error in {file} for {row[0]}, {row[1]}{row[2]}: {e}")
                     except Exception as e:
                         logger.error(f"Error in {file} for {row[0]}, {row[1]}{row[2]}: {e}")
-                except Exception as e:
-                    logger.error(f"Error in {file} for {row[0]}, {row[1]}{row[2]}: {e}")
+            except IndexError:
+                logger.error("Cannot read columns 1 and/or 2 in row")
 
 # Convert to list, and then the date from YYYY-MM string to proper date.
 data = [[key, value] for key, value in data.items()]
