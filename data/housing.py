@@ -17,7 +17,10 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import psycopg
 import requests
+import urllib3
 
+# Disable warnings about unverified https requests.
+urllib3.disable_warnings()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--csv", action="store_true")
