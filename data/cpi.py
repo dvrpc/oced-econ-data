@@ -11,7 +11,6 @@ variable in config.py.
 import argparse
 import csv
 from datetime import date
-from dateutil.relativedelta import relativedelta
 import json
 from pathlib import Path
 import sys

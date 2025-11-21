@@ -64,7 +64,7 @@ data = json.dumps(
 
 p = requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=data, headers=headers)
 if p.status_code != 200:
-    sys.exit(f"Unable to fetch data from BLS API.")
+    sys.exit("Unable to fetch data from BLS API.")
 
 json_data = json.loads(p.text)
 
